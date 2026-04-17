@@ -1,0 +1,21 @@
+{
+  "name": "fire-calculator",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "ui",
+    "api",
+    "db"
+  ],
+  "scripts": {
+    "dev:ui": "npm run dev --workspace=ui",
+    "dev:api": "npm run dev --workspace=api",
+    "dev": "concurrently \"npm run dev:ui\" \"npm run dev:api\"",
+    "build": "npm run build --workspace=db && npm run build --workspace=api && npm run build --workspace=ui",
+    "db:generate": "npm run generate --workspace=db",
+    "db:migrate": "npm run migrate --workspace=db"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

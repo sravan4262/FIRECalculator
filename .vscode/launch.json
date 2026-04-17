@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ui — Next.js debug",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/ui/node_modules/.bin/next",
+      "args": ["dev"],
+      "cwd": "${workspaceFolder}/ui",
+      "env": {
+        "NODE_OPTIONS": "--inspect"
+      },
+      "envFile": "${workspaceFolder}/ui/.env.local",
+      "sourceMaps": true,
+      "serverReadyAction": {
+        "pattern": "- Local:.+http://localhost:([0-9]+)",
+        "uriFormat": "http://localhost:%s",
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "api — Hono debug",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/api/src/index.ts",
+      "runtimeArgs": ["--experimental-strip-types", "--watch"],
+      "cwd": "${workspaceFolder}/api",
+      "envFile": "${workspaceFolder}/api/.env",
+      "sourceMaps": true,
+      "outputCapture": "std"
+    },
+    {
+      "name": "api — attach (if already running)",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "restart": true,
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full stack (ui + api)",
+      "configurations": ["ui — Next.js debug", "api — Hono debug"],
+      "stopAll": true
+    }
+  ]
+}
