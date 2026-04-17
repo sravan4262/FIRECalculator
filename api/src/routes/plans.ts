@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { supabaseAdmin } from "../lib/supabase.js";
+import { sql } from "../lib/supabase.js";
 import { authMiddleware, optionalAuthMiddleware } from "../middleware/auth.js";
 import type { AppVariables, DbPlan } from "../types.js";
 
@@ -7,14 +7,10 @@ const app = new Hono<{ Variables: AppVariables }>();
 
 app.get("/", authMiddleware, async (c) => {
   const userId = c.get("userId");
-  const { data, error } = await supabaseAdmin
-    .from("plans")
-    .select("*")
-    .eq("user_id", userId)
-    .order("updated_at");
-
-  if (error) return c.json({ error: error.message }, 500);
-  return c.json(data as DbPlan[]);
+  const rows = await sql<DbPlan[]>`
+    select * from plans where user_id = ${userId}::uuid order by updated_at
+  `;
+  return c.json(rows);
 });
 
 app.post("/", authMiddleware, async (c) => {
@@ -25,33 +21,27 @@ app.post("/", authMiddleware, async (c) => {
     return c.json({ error: "name and inputs are required" }, 400);
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("plans")
-    .insert({ user_id: userId, name: body.name, inputs: body.inputs })
-    .select()
-    .single();
-
-  if (error) return c.json({ error: error.message }, 500);
-  return c.json(data as DbPlan, 201);
+  const [plan] = (await sql`
+    insert into plans (user_id, name, inputs)
+    values (${userId}::uuid, ${body.name}, ${sql.json(body.inputs as any)})
+    returning *
+  `) as DbPlan[];
+  return c.json(plan, 201);
 });
 
 app.get("/:id", optionalAuthMiddleware, async (c) => {
   const userId = c.get("userId") as string | undefined;
   const id = c.req.param("id");
+  if (!id) return c.json({ error: "Not found" }, 404);
 
-  const { data, error } = await supabaseAdmin
-    .from("plans")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const [plan] = (await sql`
+    select * from plans where id = ${id}::uuid
+  `) as DbPlan[];
+  if (!plan) return c.json({ error: "Not found" }, 404);
 
-  if (error || !data) return c.json({ error: "Not found" }, 404);
-
-  const plan = data as DbPlan;
   if (!plan.is_public && plan.user_id !== userId) {
     return c.json({ error: "Forbidden" }, 403);
   }
-
   return c.json(plan);
 });
 
@@ -59,38 +49,34 @@ app.put("/:id", authMiddleware, async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
   const body = await c.req.json<{ name?: string; inputs?: unknown; isPublic?: boolean }>();
+  if (!id) return c.json({ error: "Not found" }, 404);
 
-  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (body.name !== undefined) patch.name = body.name;
-  if (body.inputs !== undefined) patch.inputs = body.inputs;
-  if (body.isPublic !== undefined) patch.is_public = body.isPublic;
-
-  const { data, error } = await supabaseAdmin
-    .from("plans")
-    .update(patch)
-    .eq("id", id)
-    .eq("user_id", userId)
-    .select()
-    .single();
-
-  if (error || !data) return c.json({ error: "Not found" }, 404);
-  return c.json(data as DbPlan);
+  const [plan] = (await sql`
+    update plans
+    set updated_at = now()
+      ${body.name !== undefined ? sql`, name = ${body.name}` : sql``}
+      ${body.inputs !== undefined ? sql`, inputs = ${sql.json(body.inputs as any)}` : sql``}
+      ${body.isPublic !== undefined ? sql`, is_public = ${body.isPublic}` : sql``}
+    where id = ${id}::uuid and user_id = ${userId}::uuid
+    returning *
+  `) as DbPlan[];
+  if (!plan) return c.json({ error: "Not found" }, 404);
+  return c.json(plan);
 });
 
 app.delete("/:id", authMiddleware, async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
+  if (!id) return c.json({ error: "Not found" }, 404);
 
-  const { data, error } = await supabaseAdmin
-    .from("plans")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId)
-    .select()
-    .single();
-
-  if (error || !data) return c.json({ error: "Not found" }, 404);
+  const [plan] = (await sql`
+    delete from plans
+    where id = ${id}::uuid and user_id = ${userId}::uuid
+    returning *
+  `) as DbPlan[];
+  if (!plan) return c.json({ error: "Not found" }, 404);
   return c.json({ success: true });
 });
 
 export default app;
+

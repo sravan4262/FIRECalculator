@@ -11,7 +11,8 @@
     "dev:ui": "npm run dev --workspace=ui",
     "dev:api": "npm run dev --workspace=api",
     "dev": "concurrently \"npm run dev:ui\" \"npm run dev:api\"",
-    "build": "npm run build --workspace=db && npm run build --workspace=api && npm run build --workspace=ui",
+    "build": "npm run build --workspace=api && npm run build --workspace=ui",
+    "db:setup:local": "npm run setup:local --workspace=db",
     "db:generate": "npm run generate --workspace=db",
     "db:migrate": "npm run migrate --workspace=db"
   },

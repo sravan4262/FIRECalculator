@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "setup:local": "bash scripts/setup-local.sh",
     "migrate": "echo 'Apply migrations via Supabase dashboard or: psql $DATABASE_URL -f migrations/001_initial.sql'",
     "seed": "echo 'Edit seeds/dev_seed.sql with a real user UUID then run: psql $DATABASE_URL -f seeds/dev_seed.sql'"
   }

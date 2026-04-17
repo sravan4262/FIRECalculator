@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -5,6 +6,7 @@ import { logger } from "hono/logger";
 import plansRouter from "./routes/plans.js";
 import trackerRouter from "./routes/tracker.js";
 import internalRouter from "./routes/internal.js";
+import { seedDevUser } from "./lib/supabase.js";
 
 const app = new Hono();
 
@@ -26,7 +28,8 @@ app.route("/internal", internalRouter);
 app.get("/", (c) => c.json({ name: "@fire/api", status: "ok" }));
 
 const port = Number(process.env.PORT ?? 4000);
-serve({ fetch: app.fetch, port }, () => {
+serve({ fetch: app.fetch, port }, async () => {
+  await seedDevUser();
   console.log(`api running on http://localhost:${port}`);
 });
 

@@ -1,34 +1,30 @@
 import type { Context, Next } from "hono";
-import { supabaseAdmin } from "../lib/supabase.js";
+import { verifyToken } from "../lib/verifyToken.js";
 
 export async function authMiddleware(c: Context, next: Next) {
   const authHeader = c.req.header("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
 
-  const token = authHeader.slice(7);
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  const userId = await verifyToken(token);
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
-  if (error || !data.user) {
-    return c.json({ error: "Invalid token" }, 401);
-  }
-
-  c.set("userId", data.user.id);
-  c.set("user", data.user);
+  c.set("userId", userId);
+  c.set("user", { id: userId });
   await next();
 }
 
-// Optional auth — sets userId if token present, doesn't block if missing
+// Optional auth — sets userId if token present (or DEV_USER_ID), doesn't block if missing
 export async function optionalAuthMiddleware(c: Context, next: Next) {
   const authHeader = c.req.header("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    const token = authHeader.slice(7);
-    const { data } = await supabaseAdmin.auth.getUser(token);
-    if (data.user) {
-      c.set("userId", data.user.id);
-      c.set("user", data.user);
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+
+  try {
+    const userId = await verifyToken(token);
+    if (userId) {
+      c.set("userId", userId);
+      c.set("user", { id: userId });
     }
-  }
+  } catch { /* ignore — treat as unauthenticated */ }
   await next();
 }
+

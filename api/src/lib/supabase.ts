@@ -1,13 +1,19 @@
-import { createClient } from "@supabase/supabase-js";
+import postgres from "postgres";
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set");
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL must be set");
 }
 
-// Service role client — full DB access, never exposed to browser
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+export const sql = postgres(connectionString);
+
+// Ensure the dev user exists when DEV_USER_ID is set
+export async function seedDevUser(): Promise<void> {
+  const devUserId = process.env.DEV_USER_ID;
+  if (!devUserId) return;
+  await sql`
+    insert into users (id, email)
+    values (${devUserId}::uuid, 'dev@local')
+    on conflict (id) do nothing
+  `;
+}

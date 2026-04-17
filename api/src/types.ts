@@ -1,8 +1,6 @@
-import type { User } from "@supabase/supabase-js";
-
 export type AppVariables = {
   userId: string;
-  user: User;
+  user: { id: string };
 };
 
 export interface DbPlan {

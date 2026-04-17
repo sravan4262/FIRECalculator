@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { supabaseAdmin } from "../lib/supabase.js";
+import { sql } from "../lib/supabase.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { AppVariables, DbTrackerCategory, DbTrackerEntry } from "../types.js";
 
@@ -11,12 +11,15 @@ app.get("/entries", async (c) => {
   const userId = c.get("userId");
   const month = c.req.query("month");
 
-  let query = supabaseAdmin.from("tracker_entries").select("*").eq("user_id", userId);
-  if (month) query = query.eq("month", month);
-
-  const { data, error } = await query;
-  if (error) return c.json({ error: error.message }, 500);
-  return c.json(data as DbTrackerEntry[]);
+  const rows = month
+    ? await sql<DbTrackerEntry[]>`
+        select * from tracker_entries
+        where user_id = ${userId}::uuid and month = ${month}
+      `
+    : await sql<DbTrackerEntry[]>`
+        select * from tracker_entries where user_id = ${userId}::uuid
+      `;
+  return c.json(rows);
 });
 
 app.put("/entries", async (c) => {
@@ -29,34 +32,34 @@ app.put("/entries", async (c) => {
     return c.json({ error: "Body must be a non-empty array" }, 400);
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("tracker_entries")
-    .upsert(
-      body.map((e) => ({
-        user_id: userId,
-        month: e.month,
-        category_id: e.categoryId,
-        ...(e.planned !== undefined && { planned: e.planned }),
-        ...(e.actual !== undefined && { actual: e.actual }),
-      })),
-      { onConflict: "user_id,month,category_id" }
-    )
-    .select();
+  const rows = body.map((e) => ({
+    user_id: userId,
+    month: e.month,
+    category_id: e.categoryId,
+    planned: e.planned ?? null,
+    actual: e.actual ?? null,
+  }));
 
-  if (error) return c.json({ error: error.message }, 500);
-  return c.json(data as DbTrackerEntry[]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await sql`
+    insert into tracker_entries ${sql(rows, "user_id", "month", "category_id", "planned", "actual") as any}
+    on conflict (user_id, month, category_id) do update
+    set
+      planned = case when excluded.planned is not null then excluded.planned else tracker_entries.planned end,
+      actual  = case when excluded.actual  is not null then excluded.actual  else tracker_entries.actual  end
+    returning *
+  `) as DbTrackerEntry[];
+  return c.json(data);
 });
 
 app.get("/categories", async (c) => {
   const userId = c.get("userId");
-  const { data, error } = await supabaseAdmin
-    .from("tracker_categories")
-    .select("*")
-    .eq("user_id", userId)
-    .order("sort_order");
-
-  if (error) return c.json({ error: error.message }, 500);
-  return c.json(data as DbTrackerCategory[]);
+  const rows = await sql<DbTrackerCategory[]>`
+    select * from tracker_categories
+    where user_id = ${userId}::uuid
+    order by sort_order
+  `;
+  return c.json(rows);
 });
 
 app.post("/categories", async (c) => {
@@ -67,40 +70,34 @@ app.post("/categories", async (c) => {
     return c.json({ error: "label and color are required" }, 400);
   }
 
-  const { data: existing } = await supabaseAdmin
-    .from("tracker_categories")
-    .select("sort_order")
-    .eq("user_id", userId)
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .single();
+  const [last] = await sql<Array<{ sort_order: number }>>`
+    select sort_order from tracker_categories
+    where user_id = ${userId}::uuid
+    order by sort_order desc
+    limit 1
+  `;
+  const sortOrder = last ? last.sort_order + 1 : 0;
 
-  const sortOrder = existing ? (existing.sort_order as number) + 1 : 0;
-
-  const { data, error } = await supabaseAdmin
-    .from("tracker_categories")
-    .insert({ user_id: userId, label: body.label, color: body.color, sort_order: sortOrder })
-    .select()
-    .single();
-
-  if (error) return c.json({ error: error.message }, 500);
-  return c.json(data as DbTrackerCategory, 201);
+  const [cat] = await sql<DbTrackerCategory[]>`
+    insert into tracker_categories (user_id, label, color, sort_order)
+    values (${userId}::uuid, ${body.label}, ${body.color}, ${sortOrder})
+    returning *
+  `;
+  return c.json(cat, 201);
 });
 
 app.delete("/categories/:id", async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
 
-  const { data, error } = await supabaseAdmin
-    .from("tracker_categories")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId)
-    .select()
-    .single();
-
-  if (error || !data) return c.json({ error: "Not found" }, 404);
+  const [cat] = await sql<DbTrackerCategory[]>`
+    delete from tracker_categories
+    where id = ${id}::uuid and user_id = ${userId}::uuid
+    returning *
+  `;
+  if (!cat) return c.json({ error: "Not found" }, 404);
   return c.json({ success: true });
 });
 
 export default app;
+
