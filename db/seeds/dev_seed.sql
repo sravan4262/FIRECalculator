@@ -1,0 +1,14 @@
+-- Dev seed: default tracker categories for a test user
+-- Replace <user-uuid> with an actual user id from auth.users
+
+-- insert into tracker_categories (user_id, label, color, sort_order) values
+--   ('<user-uuid>', 'Stocks / Equity',   'oklch(0.62 0.22 270)', 0),
+--   ('<user-uuid>', 'SIP / Mutual Funds','oklch(0.70 0.18 200)', 1),
+--   ('<user-uuid>', '401k / EPF',        'oklch(0.65 0.20 150)', 2),
+--   ('<user-uuid>', 'IRA / PPF',         'oklch(0.68 0.16 130)', 3),
+--   ('<user-uuid>', 'HSA',               'oklch(0.72 0.15 165)', 4),
+--   ('<user-uuid>', 'LIC / Insurance',   'oklch(0.60 0.14 310)', 5),
+--   ('<user-uuid>', 'Gold',              'oklch(0.76 0.155 75)', 6),
+--   ('<user-uuid>', 'FDs / Bonds',       'oklch(0.64 0.13 50)',  7),
+--   ('<user-uuid>', 'Savings / HYSA',    'oklch(0.70 0.12 230)', 8),
+--   ('<user-uuid>', 'Chits / Others',    'oklch(0.58 0.10 280)', 9);

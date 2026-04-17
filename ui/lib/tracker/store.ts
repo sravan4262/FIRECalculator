@@ -25,6 +25,8 @@ interface TrackerStore {
   removeCategory: (id: string) => void;
   getEntry: (month: string, categoryId: string) => MonthlyEntry | undefined;
   getMonthEntries: (month: string) => MonthlyEntry[];
+  setCategories: (cats: SavingsCategory[]) => void;
+  setEntries: (entries: MonthlyEntry[]) => void;
 }
 
 export const useTrackerStore = create<TrackerStore>()(
@@ -63,6 +65,9 @@ export const useTrackerStore = create<TrackerStore>()(
 
       getMonthEntries: (month) =>
         get().entries.filter((e) => e.month === month),
+
+      setCategories: (cats) => set({ categories: cats }),
+      setEntries: (entries) => set({ entries }),
     }),
     { name: "fire-tracker" }
   )

@@ -1,6 +1,8 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useTrackerStore } from "@/lib/tracker/store";
+import { trackerApi } from "@/lib/api/tracker";
+import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
@@ -31,12 +33,57 @@ function currentMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+const COLORS = [
+  "oklch(0.62 0.22 270)", "oklch(0.70 0.18 200)", "oklch(0.76 0.155 75)",
+  "oklch(0.65 0.20 150)", "oklch(0.60 0.14 310)",
+];
+
 export function SavingsLog() {
-  const { categories, entries, upsertEntry, addCategory, removeCategory } =
+  const { categories, entries, upsertEntry, addCategory, removeCategory, setCategories, setEntries } =
     useTrackerStore();
   const [month, setMonth] = useState(currentMonth());
   const [addingCat, setAddingCat] = useState(false);
   const [newCatLabel, setNewCatLabel] = useState("");
+  const isAuthed = useRef(false);
+
+  // Check auth and load from API on mount
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return;
+      isAuthed.current = true;
+
+      try {
+        const [cats, ents] = await Promise.all([
+          trackerApi.getCategories(),
+          trackerApi.getEntries(),
+        ]);
+
+        if (cats.length > 0) {
+          setCategories(cats.map((c) => ({ id: c.id, label: c.label, color: c.color })));
+        } else {
+          // Seed default categories for new user
+          const defaults = categories;
+          const created = await Promise.all(
+            defaults.map((cat) => trackerApi.createCategory(cat.label, cat.color))
+          );
+          setCategories(created.map((c) => ({ id: c.id, label: c.label, color: c.color })));
+        }
+
+        setEntries(
+          ents.map((e) => ({
+            month: e.month,
+            categoryId: e.category_id,
+            planned: e.planned ? parseFloat(e.planned) : 0,
+            actual: e.actual ? parseFloat(e.actual) : 0,
+          }))
+        );
+      } catch {
+        // API unavailable — keep local store
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getEntry = useCallback(
     (catId: string) =>
@@ -44,19 +91,19 @@ export function SavingsLog() {
     [entries, month]
   );
 
-  const handleChange = (
-    catId: string,
-    field: "planned" | "actual",
-    raw: string
-  ) => {
+  const handleChange = async (catId: string, field: "planned" | "actual", raw: string) => {
     const val = parseFloat(raw) || 0;
     const existing = getEntry(catId);
-    upsertEntry({
+    const updated = {
       month,
       categoryId: catId,
       planned: field === "planned" ? val : existing?.planned ?? 0,
       actual: field === "actual" ? val : existing?.actual ?? 0,
-    });
+    };
+    upsertEntry(updated);
+    if (isAuthed.current) {
+      trackerApi.upsertEntries([updated]).catch(() => {});
+    }
   };
 
   const totals = categories.reduce(
@@ -69,19 +116,30 @@ export function SavingsLog() {
     { planned: 0, actual: 0 }
   );
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCatLabel.trim()) return;
-    const colors = [
-      "oklch(0.62 0.22 270)", "oklch(0.70 0.18 200)", "oklch(0.76 0.155 75)",
-      "oklch(0.65 0.20 150)", "oklch(0.60 0.14 310)",
-    ];
-    addCategory({
-      id: `custom_${Date.now()}`,
-      label: newCatLabel.trim(),
-      color: colors[categories.length % colors.length],
-    });
+    const color = COLORS[categories.length % COLORS.length];
+    const label = newCatLabel.trim();
     setNewCatLabel("");
     setAddingCat(false);
+
+    if (isAuthed.current) {
+      try {
+        const created = await trackerApi.createCategory(label, color);
+        addCategory({ id: created.id, label: created.label, color: created.color });
+      } catch {
+        addCategory({ id: `custom_${Date.now()}`, label, color });
+      }
+    } else {
+      addCategory({ id: `custom_${Date.now()}`, label, color });
+    }
+  };
+
+  const handleRemoveCategory = async (id: string) => {
+    removeCategory(id);
+    if (isAuthed.current) {
+      trackerApi.deleteCategory(id).catch(() => {});
+    }
   };
 
   return (
@@ -134,7 +192,7 @@ export function SavingsLog() {
                 />
                 <span className="text-sm truncate">{cat.label}</span>
                 <button
-                  onClick={() => removeCategory(cat.id)}
+                  onClick={() => handleRemoveCategory(cat.id)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 text-muted-foreground/50 hover:text-destructive"
                 >
                   <Trash2 className="w-3 h-3" />

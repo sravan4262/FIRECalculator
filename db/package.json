@@ -2,24 +2,8 @@
   "name": "@fire/db",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts",
-    "./schema": "./src/schema.ts",
-    "./client": "./src/client.ts"
-  },
   "scripts": {
-    "generate": "drizzle-kit generate",
-    "migrate": "drizzle-kit migrate",
-    "studio": "drizzle-kit studio"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.49.4",
-    "drizzle-orm": "^0.43.1",
-    "postgres": "^3.4.7"
-  },
-  "devDependencies": {
-    "drizzle-kit": "^0.31.1",
-    "typescript": "^5"
+    "migrate": "echo 'Apply migrations via Supabase dashboard or: psql $DATABASE_URL -f migrations/001_initial.sql'",
+    "seed": "echo 'Edit seeds/dev_seed.sql with a real user UUID then run: psql $DATABASE_URL -f seeds/dev_seed.sql'"
   }
 }

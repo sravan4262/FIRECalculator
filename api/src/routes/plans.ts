@@ -1,87 +1,95 @@
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
-import { db } from "../lib/db";
-import { plans } from "@fire/db/schema";
-import { authMiddleware, optionalAuthMiddleware } from "../middleware/auth";
+import { supabaseAdmin } from "../lib/supabase.js";
+import { authMiddleware, optionalAuthMiddleware } from "../middleware/auth.js";
+import type { AppVariables, DbPlan } from "../types.js";
 
-const app = new Hono();
+const app = new Hono<{ Variables: AppVariables }>();
 
-// GET /plans — list authed user's plans
 app.get("/", authMiddleware, async (c) => {
-  const userId = c.get("userId") as string;
-  const rows = await db
-    .select()
-    .from(plans)
-    .where(eq(plans.userId, userId))
-    .orderBy(plans.updatedAt);
-  return c.json(rows);
+  const userId = c.get("userId");
+  const { data, error } = await supabaseAdmin
+    .from("plans")
+    .select("*")
+    .eq("user_id", userId)
+    .order("updated_at");
+
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json(data as DbPlan[]);
 });
 
-// POST /plans — create a plan
 app.post("/", authMiddleware, async (c) => {
-  const userId = c.get("userId") as string;
+  const userId = c.get("userId");
   const body = await c.req.json<{ name: string; inputs: unknown }>();
 
   if (!body.name || !body.inputs) {
     return c.json({ error: "name and inputs are required" }, 400);
   }
 
-  const [row] = await db
-    .insert(plans)
-    .values({ userId, name: body.name, inputs: body.inputs })
-    .returning();
+  const { data, error } = await supabaseAdmin
+    .from("plans")
+    .insert({ user_id: userId, name: body.name, inputs: body.inputs })
+    .select()
+    .single();
 
-  return c.json(row, 201);
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json(data as DbPlan, 201);
 });
 
-// GET /plans/:id — get a single plan (public plans readable without auth)
 app.get("/:id", optionalAuthMiddleware, async (c) => {
   const userId = c.get("userId") as string | undefined;
   const id = c.req.param("id");
 
-  const [row] = await db.select().from(plans).where(eq(plans.id, id));
+  const { data, error } = await supabaseAdmin
+    .from("plans")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-  if (!row) return c.json({ error: "Not found" }, 404);
+  if (error || !data) return c.json({ error: "Not found" }, 404);
 
-  if (!row.isPublic && row.userId !== userId) {
+  const plan = data as DbPlan;
+  if (!plan.is_public && plan.user_id !== userId) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
-  return c.json(row);
+  return c.json(plan);
 });
 
-// PUT /plans/:id — update name or inputs
 app.put("/:id", authMiddleware, async (c) => {
-  const userId = c.get("userId") as string;
+  const userId = c.get("userId");
   const id = c.req.param("id");
   const body = await c.req.json<{ name?: string; inputs?: unknown; isPublic?: boolean }>();
 
-  const [row] = await db
-    .update(plans)
-    .set({
-      ...(body.name !== undefined && { name: body.name }),
-      ...(body.inputs !== undefined && { inputs: body.inputs }),
-      ...(body.isPublic !== undefined && { isPublic: body.isPublic }),
-      updatedAt: new Date(),
-    })
-    .where(and(eq(plans.id, id), eq(plans.userId, userId)))
-    .returning();
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (body.name !== undefined) patch.name = body.name;
+  if (body.inputs !== undefined) patch.inputs = body.inputs;
+  if (body.isPublic !== undefined) patch.is_public = body.isPublic;
 
-  if (!row) return c.json({ error: "Not found" }, 404);
-  return c.json(row);
+  const { data, error } = await supabaseAdmin
+    .from("plans")
+    .update(patch)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (error || !data) return c.json({ error: "Not found" }, 404);
+  return c.json(data as DbPlan);
 });
 
-// DELETE /plans/:id
 app.delete("/:id", authMiddleware, async (c) => {
-  const userId = c.get("userId") as string;
+  const userId = c.get("userId");
   const id = c.req.param("id");
 
-  const [row] = await db
-    .delete(plans)
-    .where(and(eq(plans.id, id), eq(plans.userId, userId)))
-    .returning();
+  const { data, error } = await supabaseAdmin
+    .from("plans")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .single();
 
-  if (!row) return c.json({ error: "Not found" }, 404);
+  if (error || !data) return c.json({ error: "Not found" }, 404);
   return c.json({ success: true });
 });
 

@@ -2,9 +2,9 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import plansRouter from "./routes/plans";
-import trackerRouter from "./routes/tracker";
-import internalRouter from "./routes/internal";
+import plansRouter from "./routes/plans.js";
+import trackerRouter from "./routes/tracker.js";
+import internalRouter from "./routes/internal.js";
 
 const app = new Hono();
 

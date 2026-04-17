@@ -1,35 +1,26 @@
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
-import { db } from "../lib/db";
-import { trackerEntries, trackerCategories } from "@fire/db/schema";
-import { authMiddleware } from "../middleware/auth";
+import { supabaseAdmin } from "../lib/supabase.js";
+import { authMiddleware } from "../middleware/auth.js";
+import type { AppVariables, DbTrackerCategory, DbTrackerEntry } from "../types.js";
 
-const app = new Hono();
+const app = new Hono<{ Variables: AppVariables }>();
 
-// All tracker routes require auth
 app.use("*", authMiddleware);
 
-// GET /tracker/entries?month=YYYY-MM
 app.get("/entries", async (c) => {
-  const userId = c.get("userId") as string;
+  const userId = c.get("userId");
   const month = c.req.query("month");
 
-  const rows = month
-    ? await db
-        .select()
-        .from(trackerEntries)
-        .where(and(eq(trackerEntries.userId, userId), eq(trackerEntries.month, month)))
-    : await db
-        .select()
-        .from(trackerEntries)
-        .where(eq(trackerEntries.userId, userId));
+  let query = supabaseAdmin.from("tracker_entries").select("*").eq("user_id", userId);
+  if (month) query = query.eq("month", month);
 
-  return c.json(rows);
+  const { data, error } = await query;
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json(data as DbTrackerEntry[]);
 });
 
-// PUT /tracker/entries — upsert a batch of entries
 app.put("/entries", async (c) => {
-  const userId = c.get("userId") as string;
+  const userId = c.get("userId");
   const body = await c.req.json<
     Array<{ month: string; categoryId: string; planned?: number; actual?: number }>
   >();
@@ -38,68 +29,77 @@ app.put("/entries", async (c) => {
     return c.json({ error: "Body must be a non-empty array" }, 400);
   }
 
-  const rows = await db
-    .insert(trackerEntries)
-    .values(
+  const { data, error } = await supabaseAdmin
+    .from("tracker_entries")
+    .upsert(
       body.map((e) => ({
-        userId,
+        user_id: userId,
         month: e.month,
-        categoryId: e.categoryId,
-        planned: e.planned?.toString(),
-        actual: e.actual?.toString(),
-      }))
+        category_id: e.categoryId,
+        ...(e.planned !== undefined && { planned: e.planned }),
+        ...(e.actual !== undefined && { actual: e.actual }),
+      })),
+      { onConflict: "user_id,month,category_id" }
     )
-    .onConflictDoUpdate({
-      target: [trackerEntries.userId, trackerEntries.month, trackerEntries.categoryId],
-      set: {
-        planned: trackerEntries.planned,
-        actual: trackerEntries.actual,
-      },
-    })
-    .returning();
+    .select();
 
-  return c.json(rows);
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json(data as DbTrackerEntry[]);
 });
 
-// GET /tracker/categories
 app.get("/categories", async (c) => {
-  const userId = c.get("userId") as string;
-  const rows = await db
-    .select()
-    .from(trackerCategories)
-    .where(eq(trackerCategories.userId, userId))
-    .orderBy(trackerCategories.sortOrder);
-  return c.json(rows);
+  const userId = c.get("userId");
+  const { data, error } = await supabaseAdmin
+    .from("tracker_categories")
+    .select("*")
+    .eq("user_id", userId)
+    .order("sort_order");
+
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json(data as DbTrackerCategory[]);
 });
 
-// POST /tracker/categories
 app.post("/categories", async (c) => {
-  const userId = c.get("userId") as string;
+  const userId = c.get("userId");
   const body = await c.req.json<{ label: string; color: string }>();
 
   if (!body.label || !body.color) {
     return c.json({ error: "label and color are required" }, 400);
   }
 
-  const [row] = await db
-    .insert(trackerCategories)
-    .values({ userId, label: body.label, color: body.color })
-    .returning();
+  const { data: existing } = await supabaseAdmin
+    .from("tracker_categories")
+    .select("sort_order")
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .single();
 
-  return c.json(row, 201);
+  const sortOrder = existing ? (existing.sort_order as number) + 1 : 0;
+
+  const { data, error } = await supabaseAdmin
+    .from("tracker_categories")
+    .insert({ user_id: userId, label: body.label, color: body.color, sort_order: sortOrder })
+    .select()
+    .single();
+
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json(data as DbTrackerCategory, 201);
 });
 
-// DELETE /tracker/categories/:id
 app.delete("/categories/:id", async (c) => {
-  const userId = c.get("userId") as string;
+  const userId = c.get("userId");
   const id = c.req.param("id");
 
-  const [row] = await db
-    .delete(trackerCategories)
-    .where(and(eq(trackerCategories.id, id), eq(trackerCategories.userId, userId)))
-    .returning();
+  const { data, error } = await supabaseAdmin
+    .from("tracker_categories")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .single();
 
-  if (!row) return c.json({ error: "Not found" }, 404);
+  if (error || !data) return c.json({ error: "Not found" }, 404);
   return c.json({ success: true });
 });
 
