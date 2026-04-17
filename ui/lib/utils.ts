@@ -22,7 +22,3 @@ export function formatCurrency(value: number, compact = false): string {
 export function formatPct(value: number, decimals = 1): string {
   return `${(value * 100).toFixed(decimals)}%`;
 }
-
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}

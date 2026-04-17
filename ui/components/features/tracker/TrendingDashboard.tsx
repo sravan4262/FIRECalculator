@@ -1,7 +1,7 @@
 "use client";
 import { useMemo } from "react";
 import { useTrackerStore } from "@/lib/tracker/store";
-import { useFireStore } from "@/lib/store";
+import { useFireStore, currentMonthStr } from "@/lib/store";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -41,11 +41,6 @@ function fmtMonth(m: string): string {
     month: "short",
     year: "2-digit",
   });
-}
-
-function currentMonthStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
 interface ChartPoint {
