@@ -4,10 +4,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FolderOpen, X, Trash2, Link, Loader2, Globe, Lock } from "lucide-react";
 import { plansApi, type SavedPlan } from "@/lib/api/plans";
 import { useFireStore } from "@/lib/store";
+import { useUser } from "@/lib/hooks/useUser";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export function PlansDrawer() {
   const [open, setOpen] = useState(false);
+  const { user } = useUser();
+  const router = useRouter();
   const [plans, setPlans] = useState<SavedPlan[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +65,7 @@ export function PlansDrawer() {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => user ? setOpen(true) : router.push("/auth/login")}
         className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-1.5 transition-colors"
       >
         <FolderOpen className="w-3.5 h-3.5" />

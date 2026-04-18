@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { BookmarkPlus, Check, Loader2 } from "lucide-react";
 import { plansApi } from "@/lib/api/plans";
+import { useUser } from "@/lib/hooks/useUser";
+import { useRouter } from "next/navigation";
 import type { FireInputs } from "@/lib/engine/types";
 
 interface Props {
@@ -10,6 +12,8 @@ interface Props {
 
 export function SavePlanButton({ inputs }: Props) {
   const [state, setState] = useState<"idle" | "naming" | "saving" | "saved">("idle");
+  const { user } = useUser();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -66,7 +70,7 @@ export function SavePlanButton({ inputs }: Props) {
 
   return (
     <button
-      onClick={() => setState("naming")}
+      onClick={() => user ? setState("naming") : router.push("/auth/login")}
       className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-1.5 transition-colors"
     >
       <BookmarkPlus className="w-3.5 h-3.5" />

@@ -42,7 +42,7 @@ export async function updateSession(request: NextRequest) {
   if (!isLoggedIn) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(url, { status: 302 });
   }
 
   return NextResponse.next({ request });

@@ -25,17 +25,17 @@ export function AuthButton() {
 
   if (user) {
     return (
-      <div className="flex items-center gap-1.5">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2.5 py-1.5 rounded-lg border border-border bg-muted/10">
-          <UserIcon className="w-3 h-3" />
-          <span className="hidden sm:inline max-w-[100px] truncate">{user.email}</span>
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-sm text-foreground/70 px-3 py-2 rounded-lg border border-border bg-muted/10">
+          <UserIcon className="w-4 h-4" />
+          <span className="hidden sm:inline max-w-[120px] truncate">{user.email}</span>
         </div>
         <button
           onClick={handleSignOut}
           title="Sign out"
-          className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors"
+          className="p-2 rounded-lg border border-border text-foreground/70 hover:text-foreground hover:border-border/80 transition-colors"
         >
-          <LogOut className="w-3.5 h-3.5" />
+          <LogOut className="w-4 h-4" />
         </button>
       </div>
     );
@@ -44,9 +44,9 @@ export function AuthButton() {
   return (
     <button
       onClick={() => router.push("/auth/login")}
-      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-1.5 transition-colors"
+      className="flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-foreground border border-border hover:border-primary/60 rounded-lg px-4 py-2 transition-colors"
     >
-      <LogIn className="w-3.5 h-3.5" />
+      <LogIn className="w-4 h-4" />
       Sign in
     </button>
   );

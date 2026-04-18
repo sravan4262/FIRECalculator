@@ -5,8 +5,8 @@ import { useFireStore, type InputMode } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const modes: { id: InputMode; label: string; icon: React.ReactNode }[] = [
-  { id: "form", label: "Form", icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
-  { id: "chat", label: "Chat", icon: <MessageSquare className="w-3.5 h-3.5" /> },
+  { id: "form", label: "Form", icon: <LayoutDashboard className="w-4 h-4" /> },
+  { id: "chat", label: "Chat", icon: <MessageSquare className="w-4 h-4" /> },
 ];
 
 export function ModeToggle() {
@@ -19,10 +19,10 @@ export function ModeToggle() {
           key={mode.id}
           onClick={() => setInputMode(mode.id)}
           className={cn(
-            "relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-colors duration-200 z-10",
+            "relative flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-colors duration-200 z-10",
             inputMode === mode.id
               ? "text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground"
+              : "text-foreground/70 hover:text-foreground"
           )}
         >
           {inputMode === mode.id && (
