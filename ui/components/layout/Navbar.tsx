@@ -1,6 +1,7 @@
 "use client";
 import { Flame, Calculator, BarChart2 } from "lucide-react";
 import { ModeToggle } from "./ModeToggle";
+import { ThemeToggle } from "./ThemeToggle";
 import { AuthButton } from "./AuthButton";
 import { useFireStore } from "@/lib/store";
 import type { AppTab } from "@/lib/store";
@@ -29,17 +30,12 @@ export function Navbar() {
         </button>
 
         {/* Center: app tab switcher */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/20 border border-border/40">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50 border border-border/40">
           {(["calculator", "tracker"] as AppTab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className="relative flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-              style={{
-                color: activeTab === tab
-                  ? "oklch(0.95 0.01 265)"
-                  : "oklch(0.65 0.02 265)",
-              }}
             >
               {activeTab === tab && (
                 <motion.div
@@ -48,7 +44,11 @@ export function Navbar() {
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
-              <span className="relative z-10 flex items-center gap-2">
+              <span
+                className={`relative z-10 flex items-center gap-2 transition-colors ${
+                  activeTab === tab ? "text-foreground" : "text-muted-foreground"
+                }`}
+              >
                 {tab === "calculator" ? (
                   <Calculator className="w-4 h-4" />
                 ) : (
@@ -68,11 +68,12 @@ export function Navbar() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               onClick={resetInputs}
-              className="text-sm font-medium text-foreground/70 hover:text-foreground px-4 py-2 rounded-full border border-border hover:border-border/80 transition-colors"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground px-4 py-2 rounded-full border border-border hover:border-border/80 transition-colors"
             >
               Start over
             </motion.button>
           )}
+          <ThemeToggle />
           <AuthButton />
         </div>
       </div>

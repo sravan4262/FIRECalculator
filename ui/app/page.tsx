@@ -110,8 +110,13 @@ export default function HomePage() {
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
       >
-        <div className="absolute top-[-20%] left-[30%] w-[600px] h-[600px] rounded-full bg-primary/6 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[20%] w-[400px] h-[400px] rounded-full bg-gold/4 blur-[100px]" />
+        {/* Center glows */}
+        <div className="absolute top-[-20%] left-[30%] w-[600px] h-[600px] rounded-full bg-primary/8 dark:bg-primary/6 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[20%] w-[400px] h-[400px] rounded-full bg-gold/6 dark:bg-gold/4 blur-[100px]" />
+        {/* Side glows to fill dead space */}
+        <div className="absolute top-[10%] left-[-8%] w-[380px] h-[500px] rounded-full bg-primary/6 dark:bg-primary/4 blur-[100px]" />
+        <div className="absolute bottom-[15%] right-[-8%] w-[350px] h-[450px] rounded-full bg-primary/5 dark:bg-primary/3 blur-[100px]" />
+        <div className="absolute top-[55%] left-[-5%] w-[250px] h-[300px] rounded-full bg-gold/4 dark:bg-gold/2 blur-[80px]" />
       </div>
     </div>
   );
