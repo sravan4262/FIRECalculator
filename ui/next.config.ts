@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
       root: path.resolve(__dirname, ".."),
     },
   }),
+  async redirects() {
+    return [
+      {
+        source: "/home",
+        destination: "/",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
