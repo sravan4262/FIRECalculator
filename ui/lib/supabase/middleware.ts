@@ -1,49 +1,49 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function updateSession(request: NextRequest) {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return NextResponse.next({ request });
-  }
+async function getUser(request: NextRequest): Promise<boolean> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) return false;
 
-  let supabaseResponse = NextResponse.next({ request });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
+  // Extract the Supabase access token from cookies
+  const cookies = request.cookies.getAll();
+  const tokenCookie = cookies.find(
+    (c) => c.name.startsWith("sb-") && c.name.endsWith("-auth-token")
   );
+  if (!tokenCookie) return false;
 
-  // Refresh session — must not run logic between createServerClient and getUser
-  let user = null;
   try {
-    const { data } = await supabase.auth.getUser();
-    user = data.user;
-  } catch {
-    return supabaseResponse;
-  }
+    const parsed = JSON.parse(decodeURIComponent(tokenCookie.value));
+    const accessToken = Array.isArray(parsed) ? parsed[0] : parsed?.access_token;
+    if (!accessToken) return false;
 
+    const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: supabaseAnonKey,
+      },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAuthPage = pathname.startsWith("/auth");
   const isPublicPlan = pathname.startsWith("/plan/");
 
-  // Redirect unauthenticated users away from protected routes
-  if (!user && !isAuthPage && !isPublicPlan && pathname !== "/") {
+  if (isAuthPage || isPublicPlan || pathname === "/") {
+    return NextResponse.next({ request });
+  }
+
+  const isLoggedIn = await getUser(request);
+  if (!isLoggedIn) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  return NextResponse.next({ request });
 }
