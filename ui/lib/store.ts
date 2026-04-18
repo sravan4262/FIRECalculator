@@ -96,7 +96,7 @@ export const useFireStore = create<FireStore>((set, get) => ({
   updateInputs: (partial) => {
     set((s) => ({ inputs: { ...s.inputs, ...partial } }));
   },
-  resetInputs: () => set({ inputs: DEFAULT_INPUTS, results: null, hasResults: false }),
+  resetInputs: () => set({ inputs: DEFAULT_INPUTS, results: null, hasResults: false, wizardStep: 0 }),
 
   results: null,
   hasResults: false,

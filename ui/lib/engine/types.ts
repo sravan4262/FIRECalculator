@@ -2,9 +2,10 @@ export type AccountType = "taxable" | "roth" | "traditional";
 
 export interface AssetClass {
   label: string;
-  value: number;        // current balance in dollars
-  annualReturn: number; // nominal annual return, e.g. 0.10
+  value: number;           // current balance in dollars
+  annualReturn: number;    // nominal annual return, e.g. 0.10
   accountType?: AccountType; // default: "taxable"
+  monthlyContribution?: number; // ongoing monthly investment into this asset
 }
 
 // Per-year breakdown of which buckets funded retirement spending

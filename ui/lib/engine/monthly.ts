@@ -359,7 +359,7 @@ export function calculateFireMonthly(inputs: FireInputs): FireResults {
         }
       }
 
-      // Net monthly inflow
+      // Net monthly inflow (base savings, no per-asset contributions yet)
       const netMonthlyIn =
         baseMonthlySavings +
         redirectedEMITotal +
@@ -377,6 +377,12 @@ export function calculateFireMonthly(inputs: FireInputs): FireResults {
         }
       } else if (effectiveAssets.length > 0) {
         effectiveAssets[0].value += netMonthlyIn;
+      }
+
+      // Per-asset monthly contributions go directly into each asset
+      for (let i = 0; i < effectiveAssets.length; i++) {
+        const contrib = effectiveAssets[i].monthlyContribution ?? 0;
+        if (contrib > 0) effectiveAssets[i].value += contrib;
       }
 
       // Annual base savings growth

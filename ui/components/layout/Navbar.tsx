@@ -8,7 +8,7 @@ import type { AppTab } from "@/lib/store";
 import { motion } from "framer-motion";
 
 export function Navbar() {
-  const { hasResults, resetInputs, activeTab, setActiveTab } = useFireStore();
+  const { hasResults, resetInputs, activeTab, setActiveTab, wizardStep } = useFireStore();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -63,8 +63,9 @@ export function Navbar() {
         {/* Right controls */}
         <div className="flex items-center gap-2">
           {activeTab === "calculator" && !hasResults && <ModeToggle />}
-          {activeTab === "calculator" && hasResults && (
+          {activeTab === "calculator" && (wizardStep > 0 || hasResults) && (
             <motion.button
+              key="start-over"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               onClick={resetInputs}

@@ -4,10 +4,10 @@ import { NumberField } from "@/components/ui/NumberField";
 import { useState } from "react";
 import {
   ChevronDown, ChevronRight, Heart, Shield, GraduationCap,
-  CreditCard, Plus, Trash2, Banknote, ArrowRightLeft,
+  CreditCard, Plus, Trash2, Banknote, ArrowRightLeft, Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { EmiStream, FutureExpense, ChildOneTimeExpense } from "@/lib/engine/types";
+import type { EmiStream, FutureExpense, FutureInvestment, ChildOneTimeExpense } from "@/lib/engine/types";
 
 function Section({
   title, icon, children, defaultOpen = false,
@@ -137,6 +137,37 @@ export function StepAdvanced() {
     updateChild(childIdx, {
       oneTimeExpenses: (child.oneTimeExpenses ?? []).map((o, i) =>
         i === oteIdx ? { ...o, ...patch } : o
+      ),
+    });
+  };
+
+  // ── Future investment helpers ──────────────────────────────────────────────
+  const addInvestment = () => {
+    updateInputs({
+      futureInvestments: [
+        ...(inputs.futureInvestments ?? []),
+        {
+          label: "New Home / Property",
+          purchaseDate: nextMonthStr(),
+          investmentValue: 300000,
+          annualReturn: 0.07,
+          downPayment: 60000,
+          deductDownPayment: true,
+          emiAmount: 1500,
+          emiStartDate: nextMonthStr(),
+          emiEndDate: "",
+          deductEmiFromSavings: true,
+        } satisfies FutureInvestment,
+      ],
+    });
+  };
+  const removeInvestment = (idx: number) => {
+    updateInputs({ futureInvestments: (inputs.futureInvestments ?? []).filter((_, i) => i !== idx) });
+  };
+  const updateInvestment = (idx: number, patch: Partial<FutureInvestment>) => {
+    updateInputs({
+      futureInvestments: (inputs.futureInvestments ?? []).map((inv, i) =>
+        i === idx ? { ...inv, ...patch } : inv
       ),
     });
   };
@@ -479,6 +510,113 @@ export function StepAdvanced() {
           onChange={(v) => updateInputs({ effectiveTaxRateAccumulation: v })}
           format="percent" suffix="%" min={0} max={0.5}
         />
+      </Section>
+
+      {/* Planned future purchases */}
+      <Section title="Planned future purchases" icon={<Building2 className="w-4 h-4" />}>
+        <p className="text-xs text-muted-foreground">
+          Future homes, cars, or other assets. Added to your net worth at the purchase date and appreciate from then on.
+        </p>
+        <div className="space-y-5">
+          {(inputs.futureInvestments ?? []).map((inv, idx) => (
+            <div key={idx} className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <input
+                  className="flex-1 bg-transparent text-sm font-medium border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={inv.label}
+                  onChange={(e) => updateInvestment(idx, { label: e.target.value })}
+                  placeholder="e.g. Second home, Car"
+                />
+                <button onClick={() => removeInvestment(idx)}
+                  className="text-muted-foreground hover:text-destructive transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Purchase date</label>
+                  <input
+                    type="month"
+                    value={inv.purchaseDate}
+                    onChange={(e) => updateInvestment(idx, { purchaseDate: e.target.value })}
+                    className="w-full bg-muted/30 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <NumberField
+                  label="Asset value at purchase"
+                  value={inv.investmentValue}
+                  onChange={(v) => updateInvestment(idx, { investmentValue: v })}
+                  prefix="$" format="currency"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <NumberField
+                  label="Annual appreciation"
+                  value={inv.annualReturn}
+                  onChange={(v) => updateInvestment(idx, { annualReturn: v })}
+                  format="percent" suffix="%/yr" min={0} max={0.3}
+                />
+                <NumberField
+                  label="Down payment"
+                  value={inv.downPayment}
+                  onChange={(v) => updateInvestment(idx, { downPayment: v })}
+                  prefix="$" format="currency"
+                />
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={inv.deductDownPayment}
+                  onChange={(e) => updateInvestment(idx, { deductDownPayment: e.target.checked })}
+                  className="w-4 h-4 rounded accent-primary"
+                />
+                <span className="text-xs text-muted-foreground">Deduct down payment from net worth at purchase</span>
+              </label>
+              <div className="pt-1 border-t border-border space-y-3">
+                <p className="text-xs font-medium text-muted-foreground">EMI for this purchase</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <NumberField
+                    label="Monthly EMI"
+                    value={inv.emiAmount}
+                    onChange={(v) => updateInvestment(idx, { emiAmount: v })}
+                    prefix="$" format="currency"
+                  />
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">EMI start</label>
+                    <input
+                      type="month"
+                      value={inv.emiStartDate}
+                      onChange={(e) => updateInvestment(idx, { emiStartDate: e.target.value })}
+                      className="w-full bg-muted/30 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">EMI end</label>
+                    <input
+                      type="month"
+                      value={inv.emiEndDate}
+                      onChange={(e) => updateInvestment(idx, { emiEndDate: e.target.value })}
+                      className="w-full bg-muted/30 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={inv.deductEmiFromSavings}
+                    onChange={(e) => updateInvestment(idx, { deductEmiFromSavings: e.target.checked })}
+                    className="w-4 h-4 rounded accent-primary"
+                  />
+                  <span className="text-xs text-muted-foreground">Deduct EMI from monthly savings while active</span>
+                </label>
+              </div>
+            </div>
+          ))}
+          <button onClick={addInvestment}
+            className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors">
+            <Plus className="w-4 h-4" /> Add future purchase
+          </button>
+        </div>
       </Section>
 
       {/* Roth conversion ladder */}
