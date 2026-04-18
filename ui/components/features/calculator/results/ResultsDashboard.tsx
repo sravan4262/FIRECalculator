@@ -76,11 +76,10 @@ export function ResultsDashboard() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center py-4 relative"
+        className="py-4 space-y-3"
       >
-        {/* Action buttons — responsive: stacked on very small, row on sm+ */}
-        <div className="absolute right-0 top-3 flex flex-col sm:flex-row items-end sm:items-center gap-1.5 sm:gap-2">
-          {/* Monte Carlo toggle */}
+        {/* Action buttons row */}
+        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
           <button
             onClick={() => setMcEnabled((v) => !v)}
             className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-colors ${
@@ -92,7 +91,7 @@ export function ResultsDashboard() {
             {mcRunning
               ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
               : <Shuffle className="w-3.5 h-3.5" />}
-            Monte Carlo
+            Certainty Check
           </button>
           <ShareButton results={results} inputs={inputs} />
           <SavePlanButton inputs={inputs} />
@@ -106,6 +105,7 @@ export function ResultsDashboard() {
           </button>
         </div>
 
+        <div className="text-center">
         <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">
           Your FIRE plan
         </p>
@@ -132,6 +132,7 @@ export function ResultsDashboard() {
             {Math.round(mcResults.successRate * 100)}% chance of not running out
           </motion.div>
         )}
+        </div>
       </motion.div>
 
       {/* Hero stat cards */}

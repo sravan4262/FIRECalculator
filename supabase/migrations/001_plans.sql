@@ -1,5 +1,5 @@
 -- plans: saved FIRE input snapshots per user
-create table if not exists plans (
+create table if not exists fire.plans (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users(id) on delete cascade,
   name        text not null,
@@ -9,4 +9,4 @@ create table if not exists plans (
   updated_at  timestamptz not null default now()
 );
 
-create index if not exists plans_user_id_idx on plans(user_id);
+create index if not exists plans_user_id_idx on fire.plans(user_id);

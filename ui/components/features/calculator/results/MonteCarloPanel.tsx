@@ -159,7 +159,7 @@ export function MonteCarloPanel({
       <div className="flex items-center gap-2">
         <Shuffle className="w-4 h-4 text-primary" />
         <div>
-          <p className="text-sm font-semibold">Monte Carlo analysis</p>
+          <p className="text-sm font-semibold">How Certain Is Your FIRE?</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {mc.numTrials.toLocaleString()} randomized simulations · σ = {(mc.annualVolatility * 100).toFixed(1)}% annual volatility
           </p>
