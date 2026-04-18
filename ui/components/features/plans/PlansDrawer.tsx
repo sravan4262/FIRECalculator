@@ -66,7 +66,7 @@ export function PlansDrawer() {
     <>
       <button
         onClick={() => user ? setOpen(true) : router.push("/auth/login")}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-1.5 transition-colors"
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-2.5 transition-colors"
       >
         <FolderOpen className="w-3.5 h-3.5" />
         My plans

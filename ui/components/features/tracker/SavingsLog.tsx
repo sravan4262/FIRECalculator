@@ -148,14 +148,14 @@ export function SavingsLog() {
       <div className="flex items-center justify-between">
         <button
           onClick={() => setMonth(prevMonth(month))}
-          className="p-1.5 rounded-lg hover:bg-muted/30 transition-colors"
+          className="p-3 rounded-lg hover:bg-muted/30 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
         <h2 className="text-sm font-semibold">{monthLabel(month)}</h2>
         <button
           onClick={() => setMonth(nextMonth(month))}
-          className="p-1.5 rounded-lg hover:bg-muted/30 transition-colors"
+          className="p-3 rounded-lg hover:bg-muted/30 transition-colors"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -164,7 +164,7 @@ export function SavingsLog() {
       {/* Table */}
       <div className="glass rounded-2xl overflow-hidden">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_140px_140px_80px] text-xs text-muted-foreground px-4 py-2.5 border-b border-border/30">
+        <div className="grid grid-cols-[1fr_90px_90px_56px] sm:grid-cols-[1fr_140px_140px_80px] text-xs text-muted-foreground px-4 py-2.5 border-b border-border/30">
           <span>Category</span>
           <span className="text-right">Planned (₹/$)</span>
           <span className="text-right">Actual (₹/$)</span>
@@ -183,7 +183,7 @@ export function SavingsLog() {
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.03 }}
-              className="grid grid-cols-[1fr_140px_140px_80px] items-center px-4 py-2.5 border-b border-border/20 last:border-0 hover:bg-muted/10 group"
+              className="grid grid-cols-[1fr_90px_90px_56px] sm:grid-cols-[1fr_140px_140px_80px] items-center px-4 py-2.5 border-b border-border/20 last:border-0 hover:bg-muted/10 group"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <span
@@ -206,7 +206,7 @@ export function SavingsLog() {
                   value={planned || ""}
                   placeholder="0"
                   onChange={(e) => handleChange(cat.id, "planned", e.target.value)}
-                  className="w-28 text-right bg-transparent border border-border/30 rounded-md px-2 py-1 text-xs focus:outline-none focus:border-primary/60 tabular-nums"
+                  className="w-16 sm:w-28 text-right bg-transparent border border-border/30 rounded-md px-1 sm:px-2 py-1 text-xs focus:outline-none focus:border-primary/60 tabular-nums"
                 />
               </div>
               <div className="flex justify-end">
@@ -217,7 +217,7 @@ export function SavingsLog() {
                   value={actual || ""}
                   placeholder="0"
                   onChange={(e) => handleChange(cat.id, "actual", e.target.value)}
-                  className="w-28 text-right bg-transparent border border-border/30 rounded-md px-2 py-1 text-xs focus:outline-none focus:border-primary/60 tabular-nums"
+                  className="w-16 sm:w-28 text-right bg-transparent border border-border/30 rounded-md px-1 sm:px-2 py-1 text-xs focus:outline-none focus:border-primary/60 tabular-nums"
                 />
               </div>
               <div className="text-right tabular-nums text-xs font-medium">
@@ -234,7 +234,7 @@ export function SavingsLog() {
         })}
 
         {/* Totals */}
-        <div className="grid grid-cols-[1fr_140px_140px_80px] items-center px-4 py-3 bg-muted/10 border-t border-border/40">
+        <div className="grid grid-cols-[1fr_90px_90px_56px] sm:grid-cols-[1fr_140px_140px_80px] items-center px-4 py-3 bg-muted/10 border-t border-border/40">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             Total
           </span>

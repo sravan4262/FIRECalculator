@@ -187,7 +187,7 @@ export function StepPortfolio() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <NumberField
                 label="Current value"
                 value={asset.value}
@@ -294,7 +294,7 @@ export function StepPortfolio() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs text-muted-foreground">Purchase date</label>
                   <input
@@ -346,7 +346,7 @@ export function StepPortfolio() {
 
               <div className="pt-1 border-t border-border space-y-3">
                 <p className="text-xs font-medium text-muted-foreground">EMI for this purchase</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <NumberField
                     label="Monthly EMI"
                     value={inv.emiAmount}

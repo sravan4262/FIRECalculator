@@ -193,7 +193,7 @@ export function StepAdvanced() {
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <NumberField
                   label="Monthly EMI"
                   value={emi.monthlyAmount}
@@ -259,7 +259,7 @@ export function StepAdvanced() {
                 prefix="$"
                 format="currency"
               />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs text-muted-foreground">Start date</label>
                   <input
@@ -354,7 +354,7 @@ export function StepAdvanced() {
               </div>
 
               {/* Core education fields */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <NumberField
                   label="Child's current age"
                   value={child.currentAge}

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { BookmarkPlus, Check, Loader2 } from "lucide-react";
+import { BookmarkPlus, Check } from "lucide-react";
 import { plansApi } from "@/lib/api/plans";
 import { useUser } from "@/lib/hooks/useUser";
 import { useRouter } from "next/navigation";
@@ -71,7 +71,7 @@ export function SavePlanButton({ inputs }: Props) {
   return (
     <button
       onClick={() => user ? setState("naming") : router.push("/auth/login")}
-      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-1.5 transition-colors"
+      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-2.5 transition-colors"
     >
       <BookmarkPlus className="w-3.5 h-3.5" />
       Save plan

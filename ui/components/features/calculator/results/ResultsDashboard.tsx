@@ -79,10 +79,10 @@ export function ResultsDashboard() {
         className="py-4 space-y-3"
       >
         {/* Action buttons row */}
-        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             onClick={() => setMcEnabled((v) => !v)}
-            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-colors ${
+            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-2.5 transition-colors ${
               mcEnabled
                 ? "text-primary border-primary/50 bg-primary/10 hover:bg-primary/15"
                 : "text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
@@ -98,7 +98,7 @@ export function ResultsDashboard() {
           <PlansDrawer />
           <button
             onClick={editInputs}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-1.5 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-primary/40 rounded-lg px-3 py-2.5 transition-colors"
           >
             <Pencil className="w-3.5 h-3.5" />
             Edit
