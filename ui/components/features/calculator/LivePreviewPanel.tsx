@@ -32,26 +32,31 @@ const STEP_TIPS = [
 const FIRE_NUMBER_UNLOCKED_STEP = 4;
 
 export function LivePreviewPanel({ step }: { step: number }) {
-  const { inputs } = useFireStore();
+  const { inputs, spouseInputs, previewPerson, includeSpouse } = useFireStore();
 
+  // For step-specific previews (1-3), use the active person's inputs
+  const preview = (includeSpouse && previewPerson === "spouse") ? spouseInputs : inputs;
+
+  // FIRE number and top-level FIRE hero always use primary
   const fireNumber = inputs.retirementSpending / inputs.withdrawalRate;
   const yearsToRetirement = Math.max(0, inputs.retirementAge - inputs.currentAge);
   const retirementDuration = Math.max(0, inputs.lifeExpectancy - inputs.retirementAge);
-  const baseAnnualSavings = Math.max(0, inputs.afterTaxIncome - inputs.currentSpending);
-  const streamsAnnual = inputs.savingsStreams.reduce((sum, s) => sum + s.monthlyAmount * 12, 0);
+
+  // Step-specific calculations use preview person
+  const baseAnnualSavings = Math.max(0, preview.afterTaxIncome - preview.currentSpending);
+  const streamsAnnual = preview.savingsStreams.reduce((sum, s) => sum + s.monthlyAmount * 12, 0);
   const annualSavings = baseAnnualSavings + streamsAnnual;
-  const savingsRate = inputs.afterTaxIncome > 0
-    ? (annualSavings / inputs.afterTaxIncome) * 100
+  const savingsRate = preview.afterTaxIncome > 0
+    ? (annualSavings / preview.afterTaxIncome) * 100
     : 0;
-  // Use assets array when populated, else fall back to single-balance field
   const totalPortfolio =
-    inputs.assets.length > 0
-      ? inputs.assets.reduce((sum, a) => sum + a.value, 0)
-      : inputs.currentPortfolio;
+    preview.assets.length > 0
+      ? preview.assets.reduce((sum, a) => sum + a.value, 0)
+      : preview.currentPortfolio;
   const blendedReturn =
-    inputs.assets.length > 0 && totalPortfolio > 0
-      ? inputs.assets.reduce((sum, a) => sum + a.value * a.annualReturn, 0) / totalPortfolio
-      : inputs.expectedReturn;
+    preview.assets.length > 0 && totalPortfolio > 0
+      ? preview.assets.reduce((sum, a) => sum + a.value * a.annualReturn, 0) / totalPortfolio
+      : preview.expectedReturn;
 
   const monthlySavingsNeeded = calcMonthlySavingsNeeded(
     fireNumber,
@@ -63,9 +68,8 @@ export function LivePreviewPanel({ step }: { step: number }) {
   const onTrack = annualSavings / 12 >= monthlySavingsNeeded && monthlySavingsNeeded > 0;
   const isUnlocked = step >= FIRE_NUMBER_UNLOCKED_STEP;
 
-  // Projected portfolio: FV of current balance + FV of all ongoing monthly inflows
-  const totalMonthlyContributions = inputs.assets.reduce((sum, a) => sum + (a.monthlyContribution ?? 0), 0);
-  const baseMonthlyFromIncome = Math.max(0, inputs.afterTaxIncome - inputs.currentSpending) / 12;
+  const totalMonthlyContributions = preview.assets.reduce((sum, a) => sum + (a.monthlyContribution ?? 0), 0);
+  const baseMonthlyFromIncome = Math.max(0, preview.afterTaxIncome - preview.currentSpending) / 12;
   const totalMonthlyIn = totalMonthlyContributions + baseMonthlyFromIncome + streamsAnnual / 12;
   const n = yearsToRetirement * 12;
   const r = blendedReturn / 12;
@@ -191,8 +195,8 @@ export function LivePreviewPanel({ step }: { step: number }) {
                 <StatTile
                   icon={<Briefcase className="w-3.5 h-3.5" />}
                   label="After-tax Income"
-                  value={formatCurrency(inputs.afterTaxIncome, true)}
-                  sub={`${formatCurrency(inputs.afterTaxIncome / 12, true)}/mo`}
+                  value={formatCurrency(preview.afterTaxIncome, true)}
+                  sub={`${formatCurrency(preview.afterTaxIncome / 12, true)}/mo`}
                 />
               </div>
               <div className="glass rounded-xl p-4">
@@ -200,7 +204,7 @@ export function LivePreviewPanel({ step }: { step: number }) {
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Spending</span>
-                    <span>{formatCurrency(inputs.currentSpending, true)}/yr</span>
+                    <span>{formatCurrency(preview.currentSpending, true)}/yr</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Base saved</span>
@@ -265,25 +269,25 @@ export function LivePreviewPanel({ step }: { step: number }) {
                 <StatTile
                   icon={<PiggyBank className="w-3.5 h-3.5" />}
                   label="Social Security"
-                  value={inputs.socialSecurityBenefit ? formatCurrency(inputs.socialSecurityBenefit * 12, true) + "/yr" : "Not set"}
-                  sub={inputs.socialSecurityBenefit ? `from age ${inputs.socialSecurityAge}` : "optional"}
+                  value={preview.socialSecurityBenefit ? formatCurrency(preview.socialSecurityBenefit * 12, true) + "/yr" : "Not set"}
+                  sub={preview.socialSecurityBenefit ? `from age ${preview.socialSecurityAge}` : "optional"}
                 />
                 <StatTile
                   icon={<Briefcase className="w-3.5 h-3.5" />}
                   label="Pension"
-                  value={inputs.pensionBenefit ? formatCurrency(inputs.pensionBenefit * 12, true) + "/yr" : "Not set"}
-                  sub={inputs.pensionBenefit ? `from age ${inputs.pensionStartAge}` : "optional"}
+                  value={preview.pensionBenefit ? formatCurrency(preview.pensionBenefit * 12, true) + "/yr" : "Not set"}
+                  sub={preview.pensionBenefit ? `from age ${preview.pensionStartAge}` : "optional"}
                 />
               </div>
               <div className="glass rounded-xl p-4 space-y-2">
                 <p className="text-xs text-muted-foreground mb-2">Tax rates</p>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Accumulation</span>
-                  <span>{((inputs.effectiveTaxRateAccumulation ?? 0.22) * 100).toFixed(0)}%</span>
+                  <span>{((preview.effectiveTaxRateAccumulation ?? 0.22) * 100).toFixed(0)}%</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Retirement</span>
-                  <span>{((inputs.effectiveTaxRateRetirement ?? 0.12) * 100).toFixed(0)}%</span>
+                  <span>{((preview.effectiveTaxRateRetirement ?? 0.12) * 100).toFixed(0)}%</span>
                 </div>
               </div>
             </>

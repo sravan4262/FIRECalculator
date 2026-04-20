@@ -8,7 +8,9 @@ import {
   ChevronDown, ChevronRight, PiggyBank,
 } from "lucide-react";
 import { formatPct } from "@/lib/utils";
-import type { SavingsStream } from "@/lib/engine/types";
+import type { SavingsStream, FireInputs } from "@/lib/engine/types";
+
+type Person = "you" | "spouse";
 
 function Section({
   title, icon, children, defaultOpen = false,
@@ -35,25 +37,51 @@ function Section({
   );
 }
 
+function PersonTabs({ person, onChange }: { person: Person; onChange: (p: Person) => void }) {
+  return (
+    <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+      {(["you", "spouse"] as Person[]).map((p) => (
+        <button
+          key={p}
+          onClick={() => onChange(p)}
+          className={`px-4 py-1 text-sm rounded-md transition-colors ${
+            person === p
+              ? "bg-background text-foreground shadow-sm font-medium"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {p === "you" ? "You" : "Spouse"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function StepIncome() {
-  const { inputs, updateInputs } = useFireStore();
+  const { inputs, updateInputs, includeSpouse, spouseInputs, updateSpouseInputs, setPreviewPerson } = useFireStore();
   const errors = useValidationErrors();
+  const [person, setPerson] = useState<Person>("you");
+
+  const handlePersonChange = (p: Person) => { setPerson(p); setPreviewPerson(p); };
+
+  const activeInputs: FireInputs = includeSpouse && person === "spouse" ? spouseInputs : inputs;
+  const activeUpdate = includeSpouse && person === "spouse" ? updateSpouseInputs : updateInputs;
 
   const savingsRate =
-    inputs.afterTaxIncome > 0
-      ? (inputs.afterTaxIncome - inputs.currentSpending) / inputs.afterTaxIncome
+    activeInputs.afterTaxIncome > 0
+      ? (activeInputs.afterTaxIncome - activeInputs.currentSpending) / activeInputs.afterTaxIncome
       : 0;
-  const annualSavings = inputs.afterTaxIncome - inputs.currentSpending;
+  const annualSavings = activeInputs.afterTaxIncome - activeInputs.currentSpending;
 
   const circumference = 2 * Math.PI * 20;
   const dashOffset = circumference * (1 - Math.max(0, Math.min(1, savingsRate)));
 
   const addStream = () => {
-    updateInputs({
+    activeUpdate({
       savingsStreams: [
-        ...(inputs.savingsStreams ?? []),
+        ...(activeInputs.savingsStreams ?? []),
         {
-          label: `Stream ${(inputs.savingsStreams?.length ?? 0) + 1}`,
+          label: `Stream ${(activeInputs.savingsStreams?.length ?? 0) + 1}`,
           monthlyAmount: 500,
           annualIncreaseRate: 0.03,
           startDate: currentMonthStr(),
@@ -64,21 +92,23 @@ export function StepIncome() {
   };
 
   const removeStream = (idx: number) => {
-    updateInputs({ savingsStreams: (inputs.savingsStreams ?? []).filter((_, i) => i !== idx) });
+    activeUpdate({ savingsStreams: (activeInputs.savingsStreams ?? []).filter((_, i) => i !== idx) });
   };
 
   const updateStream = (idx: number, patch: Partial<SavingsStream>) => {
-    updateInputs({
-      savingsStreams: (inputs.savingsStreams ?? []).map((s, i) =>
+    activeUpdate({
+      savingsStreams: (activeInputs.savingsStreams ?? []).map((s, i) =>
         i === idx ? { ...s, ...patch } : s
       ),
     });
   };
 
-  const totalStreams = (inputs.savingsStreams ?? []).reduce(
+  const totalStreams = (activeInputs.savingsStreams ?? []).reduce(
     (s, st) => s + st.monthlyAmount,
     0
   );
+
+  const isSpouse = includeSpouse && person === "spouse";
 
   return (
     <div className="space-y-6">
@@ -89,12 +119,16 @@ export function StepIncome() {
         </p>
       </div>
 
+      {includeSpouse && (
+        <PersonTabs person={person} onChange={handlePersonChange} />
+      )}
+
       <div className="grid gap-4">
         <NumberField
           label="Annual gross income"
           icon={<DollarSign className="w-4 h-4" />}
-          value={inputs.grossIncome}
-          onChange={(v) => updateInputs({ grossIncome: v })}
+          value={activeInputs.grossIncome}
+          onChange={(v) => activeUpdate({ grossIncome: v })}
           prefix="$"
           format="currency"
           placeholder="e.g. 120,000"
@@ -103,30 +137,30 @@ export function StepIncome() {
         <NumberField
           label="Annual after-tax income"
           icon={<DollarSign className="w-4 h-4" />}
-          value={inputs.afterTaxIncome}
-          onChange={(v) => updateInputs({ afterTaxIncome: v })}
+          value={activeInputs.afterTaxIncome}
+          onChange={(v) => activeUpdate({ afterTaxIncome: v })}
           prefix="$"
           format="currency"
           placeholder="e.g. 90,000"
           hint="Take-home pay you actually receive"
-          error={errors.afterTaxIncome}
+          error={!isSpouse ? errors.afterTaxIncome : undefined}
         />
         <NumberField
-          label="Annual spending"
+          label={isSpouse ? "Annual spending (leave 0 to share household)" : "Annual spending"}
           icon={<ShoppingCart className="w-4 h-4" />}
-          value={inputs.currentSpending}
-          onChange={(v) => updateInputs({ currentSpending: v })}
+          value={activeInputs.currentSpending}
+          onChange={(v) => activeUpdate({ currentSpending: v })}
           prefix="$"
           format="currency"
           placeholder="e.g. 60,000"
-          hint="What you actually spend each year"
-          error={errors.currentSpending}
+          hint={isSpouse ? "Spouse's individual spending; combined uses your household total" : "What you actually spend each year"}
+          error={!isSpouse ? errors.currentSpending : undefined}
         />
         <NumberField
           label="Salary growth rate"
           icon={<TrendingUp className="w-4 h-4" />}
-          value={inputs.salaryGrowthRate}
-          onChange={(v) => updateInputs({ salaryGrowthRate: v })}
+          value={activeInputs.salaryGrowthRate}
+          onChange={(v) => activeUpdate({ salaryGrowthRate: v })}
           format="percent"
           suffix="%/yr"
           min={0}
@@ -158,7 +192,7 @@ export function StepIncome() {
         <div className="space-y-1 text-sm">
           <p className="font-semibold">Base savings rate</p>
           <p className="text-muted-foreground text-xs">
-            You save{" "}
+            {isSpouse ? "Spouse saves" : "You save"}{" "}
             <span className="text-foreground font-medium">
               ${Math.max(0, annualSavings).toLocaleString()}
             </span>{" "}
@@ -187,11 +221,11 @@ export function StepIncome() {
       {/* Additional savings streams */}
       <Section title="Additional savings streams" icon={<PiggyBank className="w-4 h-4" />}>
         <p className="text-xs text-muted-foreground">
-          Named savings vehicles (SIP, 401k, LIC, chits, etc.) added on top of your
-          base income − spending. Each stream can have its own growth rate and date range.
+          Named savings vehicles (SIP, 401k, LIC, chits, etc.) added on top of base income − spending.
+          Each stream can have its own growth rate and date range.
         </p>
         <div className="space-y-4">
-          {(inputs.savingsStreams ?? []).map((stream, idx) => (
+          {(activeInputs.savingsStreams ?? []).map((stream, idx) => (
             <div key={idx} className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <input

@@ -7,7 +7,9 @@ import {
   Wallet, TrendingUp, Activity, Plus, Trash2,
   ChevronDown, ChevronRight,
 } from "lucide-react";
-import type { AssetClass, AccountType } from "@/lib/engine/types";
+import type { AssetClass, AccountType, FireInputs } from "@/lib/engine/types";
+
+type Person = "you" | "spouse";
 
 const ASSET_PRESETS: { label: string; annualReturn: number; accountType: AccountType }[] = [
   { label: "Stocks / Equity",     annualReturn: 0.10, accountType: "taxable" },
@@ -56,10 +58,35 @@ function Section({
   );
 }
 
+function PersonTabs({ person, onChange }: { person: Person; onChange: (p: Person) => void }) {
+  return (
+    <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+      {(["you", "spouse"] as Person[]).map((p) => (
+        <button
+          key={p}
+          onClick={() => onChange(p)}
+          className={`px-4 py-1 text-sm rounded-md transition-colors ${
+            person === p
+              ? "bg-background text-foreground shadow-sm font-medium"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {p === "you" ? "You" : "Spouse"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function StepPortfolio() {
-  const { inputs, updateInputs } = useFireStore();
-  const { assets, inflationRate } = inputs;
-  const [expandedAssets, setExpandedAssets] = useState<Set<number>>(new Set([0]));
+  const { inputs, updateInputs, includeSpouse, spouseInputs, updateSpouseInputs, setPreviewPerson } = useFireStore();
+  const [person, setPerson] = useState<Person>("you");
+  const [expandedAssets, setExpandedAssets] = useState<Set<number>>(new Set());
+
+  const activeInputs: FireInputs = includeSpouse && person === "spouse" ? spouseInputs : inputs;
+  const activeUpdate = includeSpouse && person === "spouse" ? updateSpouseInputs : updateInputs;
+
+  const { assets, inflationRate } = activeInputs;
 
   const toggleAsset = (idx: number) => {
     setExpandedAssets((prev) => {
@@ -75,22 +102,22 @@ export function StepPortfolio() {
   const weightedNominalReturn =
     totalNetWorth > 0
       ? assets.reduce((s, a) => s + a.annualReturn * a.value, 0) / totalNetWorth
-      : inputs.expectedReturn;
+      : activeInputs.expectedReturn;
   const weightedRealReturn =
     (1 + weightedNominalReturn) / (1 + inflationRate) - 1;
 
   const updateAsset = (idx: number, patch: Partial<AssetClass>) => {
-    updateInputs({
+    activeUpdate({
       assets: assets.map((a, i) => (i === idx ? { ...a, ...patch } : a)),
     });
   };
   const addAsset = () => {
     const newIdx = assets.length;
-    updateInputs({ assets: [...assets, { label: "Stocks / Equity", value: 0, annualReturn: 0.10, accountType: "taxable" }] });
+    activeUpdate({ assets: [...assets, { label: "Stocks / Equity", value: 0, annualReturn: 0.10, accountType: "taxable" }] });
     setExpandedAssets((prev) => new Set([...prev, newIdx]));
   };
   const removeAsset = (idx: number) => {
-    updateInputs({ assets: assets.filter((_, i) => i !== idx) });
+    activeUpdate({ assets: assets.filter((_, i) => i !== idx) });
     setExpandedAssets((prev) => {
       const next = new Set<number>();
       prev.forEach((i) => { if (i < idx) next.add(i); else if (i > idx) next.add(i - 1); });
@@ -101,17 +128,23 @@ export function StepPortfolio() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Your net worth</h2>
+        <h2 className="text-xl font-semibold">
+          {includeSpouse ? "Net worth" : "Your net worth"}
+        </h2>
         <p className="text-sm text-muted-foreground mt-1">
           Break your portfolio into asset classes — each gets its own return rate.
         </p>
       </div>
 
+      {includeSpouse && (
+        <PersonTabs person={person} onChange={(p) => { setPerson(p); setPreviewPerson(p); setExpandedAssets(new Set()); }} />
+      )}
+
       {/* Total net worth summary */}
       <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Wallet className="w-4 h-4 text-primary" />
-          Total net worth
+          {includeSpouse && person === "spouse" ? "Spouse's net worth" : "Total net worth"}
         </div>
         <span className="text-xl font-bold text-primary tabular-nums">
           {formatCurrency(totalNetWorth)}
@@ -261,19 +294,21 @@ export function StepPortfolio() {
         </button>
       </div>
 
-      {/* Inflation */}
-      <NumberField
-        label="Inflation rate"
-        icon={<Activity className="w-4 h-4" />}
-        value={inflationRate}
-        onChange={(v) => updateInputs({ inflationRate: v })}
-        format="percent"
-        suffix="%/yr"
-        min={0}
-        max={0.1}
-        placeholder="e.g. 3"
-        hint="Historical average ~3%. All returns are nominal; engine converts to real."
-      />
+      {/* Inflation — shared setting, only show on "you" tab */}
+      {(!includeSpouse || person === "you") && (
+        <NumberField
+          label="Inflation rate"
+          icon={<Activity className="w-4 h-4" />}
+          value={inflationRate}
+          onChange={(v) => activeUpdate({ inflationRate: v })}
+          format="percent"
+          suffix="%/yr"
+          min={0}
+          max={0.1}
+          placeholder="e.g. 3"
+          hint="Historical average ~3%. All returns are nominal; engine converts to real."
+        />
+      )}
 
       {/* Blended return summary */}
       <div className="rounded-xl border border-border bg-muted/30 p-4">

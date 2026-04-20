@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import type { FireInputs, FireResults } from "./engine/types";
 import { calculateFireMonthly } from "./engine/monthly";
+import { mergeInputs } from "./engine/merge";
 
 export type InputMode = "form" | "chat";
 export type WizardStep = 0 | 1 | 2 | 3 | 4;
@@ -69,11 +70,21 @@ interface FireStore {
   updateInputs: (partial: Partial<FireInputs>) => void;
   resetInputs: () => void;
 
+  // Spouse
+  includeSpouse: boolean;
+  setIncludeSpouse: (v: boolean) => void;
+  spouseInputs: FireInputs;
+  updateSpouseInputs: (partial: Partial<FireInputs>) => void;
+  spouseResults: FireResults | null;
+  unifiedResults: FireResults | null;
+
   results: FireResults | null;
   hasResults: boolean;
   calculate: () => void;
-  // Returns to the wizard with inputs intact so the user can tweak and recalculate
   editInputs: () => void;
+
+  previewPerson: "you" | "spouse";
+  setPreviewPerson: (p: "you" | "spouse") => void;
 
   chatCollectedFields: Set<string>;
   markChatField: (field: string) => void;
@@ -94,16 +105,52 @@ export const useFireStore = create<FireStore>((set, get) => ({
   updateInputs: (partial) => {
     set((s) => ({ inputs: { ...s.inputs, ...partial } }));
   },
-  resetInputs: () => set({ inputs: DEFAULT_INPUTS, results: null, hasResults: false, wizardStep: 0 }),
+  resetInputs: () => set({
+    inputs: DEFAULT_INPUTS,
+    spouseInputs: DEFAULT_INPUTS,
+    includeSpouse: false,
+    results: null,
+    spouseResults: null,
+    unifiedResults: null,
+    hasResults: false,
+    wizardStep: 0,
+  }),
+
+  // Spouse state
+  includeSpouse: false,
+  setIncludeSpouse: (v) => set({ includeSpouse: v }),
+  spouseInputs: DEFAULT_INPUTS,
+  updateSpouseInputs: (partial) => {
+    set((s) => ({ spouseInputs: { ...s.spouseInputs, ...partial } }));
+  },
+  spouseResults: null,
+  unifiedResults: null,
 
   results: null,
   hasResults: false,
   calculate: () => {
-    const { inputs } = get();
+    const { inputs, includeSpouse, spouseInputs } = get();
     const results = calculateFireMonthly(inputs);
-    set({ results, hasResults: true });
+    if (includeSpouse) {
+      // For spouse calc: inherit shared rates from primary if spouse has defaults
+      const spouseCalcInputs: FireInputs = {
+        ...spouseInputs,
+        inflationRate: spouseInputs.inflationRate || inputs.inflationRate,
+        withdrawalRate: spouseInputs.withdrawalRate || inputs.withdrawalRate,
+        retirementSpending: spouseInputs.retirementSpending || inputs.retirementSpending,
+      };
+      const spouseResults = calculateFireMonthly(spouseCalcInputs);
+      const unified = mergeInputs(inputs, spouseCalcInputs);
+      const unifiedResults = calculateFireMonthly(unified);
+      set({ results, spouseResults, unifiedResults, hasResults: true });
+    } else {
+      set({ results, spouseResults: null, unifiedResults: null, hasResults: true });
+    }
   },
   editInputs: () => set({ hasResults: false }),
+
+  previewPerson: "you",
+  setPreviewPerson: (p) => set({ previewPerson: p }),
 
   chatCollectedFields: new Set(),
   markChatField: (field) => {

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useFireStore, type WizardStep } from "@/lib/store";
 import { ValidationContext } from "@/lib/ValidationContext";
@@ -11,7 +11,6 @@ import { StepScenarios } from "./steps/StepScenarios";
 import { cn } from "@/lib/utils";
 import { ChevronRight, ChevronLeft, Flame } from "lucide-react";
 import { LivePreviewPanel } from "./LivePreviewPanel";
-import type { FireInputs } from "@/lib/engine/types";
 
 const STEPS: { label: string; shortLabel: string }[] = [
   { label: "You", shortLabel: "You" },
@@ -25,42 +24,45 @@ const StepComponents = [StepYou, StepIncome, StepPortfolio, StepAdvanced, StepSc
 
 type Errors = Record<string, string>;
 
-const STEP_VALIDATORS: Array<(inputs: FireInputs) => Errors> = [
-  (inputs) => {
-    const e: Errors = {};
-    if (!inputs.currentAge) e.currentAge = "Enter your current age";
-    if (!inputs.retirementAge) e.retirementAge = "Enter your target retirement age";
-    else if (inputs.retirementAge <= inputs.currentAge) e.retirementAge = "Must be after your current age";
-    if (!inputs.lifeExpectancy) e.lifeExpectancy = "Enter your life expectancy";
-    else if (inputs.lifeExpectancy <= inputs.retirementAge) e.lifeExpectancy = "Must be after retirement age";
-    return e;
-  },
-  (inputs) => {
-    const e: Errors = {};
-    if (!inputs.afterTaxIncome) e.afterTaxIncome = "Enter your after-tax income";
-    if (!inputs.currentSpending) e.currentSpending = "Enter your annual spending";
-    return e;
-  },
-  () => ({}),
-  () => ({}),
-  (inputs) => {
-    const e: Errors = {};
-    if (!inputs.retirementSpending && !inputs.monthlyRetirementSalary)
-      e.retirementSpending = "Enter your target retirement spending";
-    return e;
-  },
-];
-
 export function FormWizard() {
-  const { wizardStep, setWizardStep, calculate } = useFireStore();
-  const { inputs } = useFireStore();
+  const { wizardStep, setWizardStep, calculate, inputs, spouseInputs, includeSpouse } = useFireStore();
   const [errors, setErrors] = useState<Errors>({});
+
+  // Clear errors as user edits fields so stale red highlights don't persist
+  useEffect(() => { setErrors({}); }, [inputs, spouseInputs]);
 
   const StepContent = StepComponents[wizardStep];
   const isLast = wizardStep === STEPS.length - 1;
 
+  const validate = (step: WizardStep): Errors => {
+    const e: Errors = {};
+    if (step === 0) {
+      if (!inputs.currentAge) e.currentAge = "Enter your current age";
+      if (!inputs.retirementAge) e.retirementAge = "Enter your target retirement age";
+      else if (inputs.retirementAge <= inputs.currentAge) e.retirementAge = "Must be after your current age";
+      if (!inputs.lifeExpectancy) e.lifeExpectancy = "Enter your life expectancy";
+      else if (inputs.lifeExpectancy <= inputs.retirementAge) e.lifeExpectancy = "Must be after retirement age";
+      if (includeSpouse) {
+        if (!spouseInputs.currentAge) e.spouseCurrentAge = "Enter spouse's current age";
+        if (!spouseInputs.retirementAge) e.spouseRetirementAge = "Enter spouse's target retirement age";
+        else if (spouseInputs.retirementAge <= spouseInputs.currentAge) e.spouseRetirementAge = "Must be after spouse's current age";
+        if (!spouseInputs.lifeExpectancy) e.spouseLifeExpectancy = "Enter spouse's life expectancy";
+        else if (spouseInputs.lifeExpectancy <= spouseInputs.retirementAge) e.spouseLifeExpectancy = "Must be after spouse's retirement age";
+      }
+    }
+    if (step === 1) {
+      if (!inputs.afterTaxIncome) e.afterTaxIncome = "Enter your after-tax income";
+      if (!inputs.currentSpending) e.currentSpending = "Enter your annual spending";
+    }
+    if (step === 4) {
+      if (!inputs.retirementSpending && !inputs.monthlyRetirementSalary)
+        e.retirementSpending = "Enter your target retirement spending";
+    }
+    return e;
+  };
+
   const goNext = () => {
-    const stepErrors = STEP_VALIDATORS[wizardStep](inputs);
+    const stepErrors = validate(wizardStep);
     if (Object.keys(stepErrors).length > 0) {
       setErrors(stepErrors);
       return;

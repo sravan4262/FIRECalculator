@@ -5,12 +5,43 @@ import { NumberField } from "@/components/ui/NumberField";
 import { Slider } from "@/components/ui/slider";
 import { formatCurrency } from "@/lib/utils";
 import { Zap } from "lucide-react";
+import { useState } from "react";
+import type { FireInputs } from "@/lib/engine/types";
+
+type Person = "you" | "spouse";
+
+function PersonTabs({ person, onChange }: { person: Person; onChange: (p: Person) => void }) {
+  return (
+    <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+      {(["you", "spouse"] as Person[]).map((p) => (
+        <button
+          key={p}
+          onClick={() => onChange(p)}
+          className={`px-4 py-1 text-sm rounded-md transition-colors ${
+            person === p
+              ? "bg-background text-foreground shadow-sm font-medium"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {p === "you" ? "You" : "Spouse"}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function StepScenarios() {
-  const { inputs, updateInputs } = useFireStore();
+  const { inputs, updateInputs, includeSpouse, spouseInputs, updateSpouseInputs, setPreviewPerson } = useFireStore();
   const errors = useValidationErrors();
+  const [person, setPerson] = useState<Person>("you");
+  const handlePersonChange = (p: Person) => { setPerson(p); setPreviewPerson(p); };
 
-  const fireNumber = inputs.withdrawalRate > 0 ? inputs.retirementSpending / inputs.withdrawalRate : 0;
+  const activeInputs: FireInputs = includeSpouse && person === "spouse" ? spouseInputs : inputs;
+  const activeUpdate = includeSpouse && person === "spouse" ? updateSpouseInputs : updateInputs;
+
+  const fireNumber = activeInputs.withdrawalRate > 0
+    ? activeInputs.retirementSpending / activeInputs.withdrawalRate
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -21,17 +52,21 @@ export function StepScenarios() {
         </p>
       </div>
 
+      {includeSpouse && (
+        <PersonTabs person={person} onChange={handlePersonChange} />
+      )}
+
       {/* FIRE number preview */}
       <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 text-center glow-indigo">
         <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">
-          Your FIRE number
+          {includeSpouse && person === "spouse" ? "Spouse's FIRE number" : "Your FIRE number"}
         </p>
         <p className="text-4xl font-bold text-primary tabular-nums">
           {fireNumber > 0 ? formatCurrency(fireNumber) : "—"}
         </p>
         <p className="text-xs text-muted-foreground mt-2">
-          {inputs.retirementSpending > 0 && inputs.withdrawalRate > 0
-            ? `${formatCurrency(inputs.retirementSpending)} ÷ ${(inputs.withdrawalRate * 100).toFixed(1)}% withdrawal rate`
+          {activeInputs.retirementSpending > 0 && activeInputs.withdrawalRate > 0
+            ? `${formatCurrency(activeInputs.retirementSpending)} ÷ ${(activeInputs.withdrawalRate * 100).toFixed(1)}% withdrawal rate`
             : "Enter retirement spending and withdrawal rate above"}
         </p>
       </div>
@@ -40,13 +75,13 @@ export function StepScenarios() {
         <div className="space-y-2">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground uppercase tracking-wide">Withdrawal rate</span>
-            <span className="font-medium text-primary">{(inputs.withdrawalRate * 100).toFixed(1)}%</span>
+            <span className="font-medium text-primary">{(activeInputs.withdrawalRate * 100).toFixed(1)}%</span>
           </div>
           <Slider
-            value={[inputs.withdrawalRate * 100]}
+            value={[activeInputs.withdrawalRate * 100]}
             onValueChange={(val) => {
               const v = Array.isArray(val) ? (val as number[])[0] : (val as number);
-              updateInputs({ withdrawalRate: v / 100 });
+              activeUpdate({ withdrawalRate: v / 100 });
             }}
             min={2} max={6} step={0.1}
           />
@@ -58,13 +93,17 @@ export function StepScenarios() {
 
         <NumberField
           label="Annual retirement spending"
-          value={inputs.retirementSpending}
-          onChange={(v) => updateInputs({ retirementSpending: v })}
+          value={activeInputs.retirementSpending}
+          onChange={(v) => activeUpdate({ retirementSpending: v })}
           prefix="$"
           format="currency"
           placeholder="e.g. 60,000"
-          hint="Your target annual spend in retirement (today's dollars)"
-          error={errors.retirementSpending}
+          hint={
+            includeSpouse && person === "spouse"
+              ? "Spouse's individual annual spend in retirement (today's dollars). Leave 0 to inherit household total."
+              : "Your target annual spend in retirement (today's dollars)"
+          }
+          error={person === "you" ? errors.retirementSpending : undefined}
         />
       </div>
 

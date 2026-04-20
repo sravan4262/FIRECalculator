@@ -32,6 +32,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
+      suppressHydrationWarning
     >
       <head>
         {/* Anti-flash: apply saved theme before first paint */}

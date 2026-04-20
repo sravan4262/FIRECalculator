@@ -2,10 +2,10 @@
 import { useFireStore } from "@/lib/store";
 import { useValidationErrors } from "@/lib/ValidationContext";
 import { NumberField } from "@/components/ui/NumberField";
-import { User, Calendar, Clock } from "lucide-react";
+import { User, Calendar, Clock, Users } from "lucide-react";
 
 export function StepYou() {
-  const { inputs, updateInputs } = useFireStore();
+  const { inputs, updateInputs, includeSpouse, setIncludeSpouse, spouseInputs, updateSpouseInputs } = useFireStore();
   const errors = useValidationErrors();
 
   return (
@@ -72,6 +72,71 @@ export function StepYou() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Spouse / partner toggle */}
+      <div className="rounded-xl border border-border overflow-hidden">
+        <button
+          onClick={() => setIncludeSpouse(!includeSpouse)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-muted/20 hover:bg-muted/40 transition-colors text-left"
+        >
+          <span className="flex items-center gap-2 text-sm font-medium">
+            <Users className="w-4 h-4 text-primary" />
+            Include spouse / partner
+          </span>
+          <div
+            className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${
+              includeSpouse ? "bg-primary" : "bg-muted-foreground/30"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                includeSpouse ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </div>
+        </button>
+
+        {includeSpouse && (
+          <div className="px-4 pb-4 pt-2 space-y-4 border-t border-border/50">
+            <p className="text-xs text-muted-foreground pt-1">
+              You&apos;ll get separate FIRE plans for each of you, plus a unified household view.
+            </p>
+            <NumberField
+              label="Spouse's current age"
+              icon={<User className="w-4 h-4" />}
+              value={spouseInputs.currentAge}
+              onChange={(v) => updateSpouseInputs({ currentAge: v })}
+              min={18}
+              max={80}
+              suffix="years"
+              placeholder="e.g. 28"
+              error={errors.spouseCurrentAge}
+            />
+            <NumberField
+              label="Spouse's target retirement age"
+              icon={<Calendar className="w-4 h-4" />}
+              value={spouseInputs.retirementAge}
+              onChange={(v) => updateSpouseInputs({ retirementAge: v })}
+              min={spouseInputs.currentAge + 1}
+              max={80}
+              suffix="years"
+              placeholder="e.g. 52"
+              error={errors.spouseRetirementAge}
+            />
+            <NumberField
+              label="Spouse's life expectancy"
+              icon={<Clock className="w-4 h-4" />}
+              value={spouseInputs.lifeExpectancy}
+              onChange={(v) => updateSpouseInputs({ lifeExpectancy: v })}
+              min={spouseInputs.retirementAge + 1}
+              max={110}
+              suffix="years"
+              placeholder="e.g. 90"
+              error={errors.spouseLifeExpectancy}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

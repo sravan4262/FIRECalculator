@@ -1,6 +1,7 @@
 "use client";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useFireStore } from "@/lib/store";
+import { mergeInputs } from "@/lib/engine/merge";
 import { StatCard } from "./StatCard";
 import { PortfolioChart } from "./PortfolioChart";
 import { FireVariants } from "./FireVariants";
@@ -16,61 +17,94 @@ import { PlansDrawer } from "@/components/features/plans/PlansDrawer";
 import { runMonteCarlo } from "@/lib/engine/monteCarlo";
 import { HISTORICAL_SCENARIOS, runHistoricalSequence } from "@/lib/engine/historicalSequences";
 import { formatCurrency, formatPct } from "@/lib/utils";
-import type { FireResults, MonteCarloResults, HistoricalSequenceResult } from "@/lib/engine/types";
+import type { FireResults, MonteCarloResults, HistoricalSequenceResult, FireInputs } from "@/lib/engine/types";
 import {
   Flame, Target, Clock, TrendingUp, AlertTriangle,
   Hourglass, Shield, ArrowUpRight, Pencil, Shuffle, Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
+type ResultView = "you" | "spouse" | "combined";
+
 export function ResultsDashboard() {
-  const { results, inputs, editInputs } = useFireStore();
+  const { results, inputs, editInputs, includeSpouse, spouseInputs, spouseResults, unifiedResults } = useFireStore();
+  const [view, setView] = useState<ResultView>("you");
   const [whatIfResults, setWhatIfResults] = useState<FireResults | null>(null);
   const [mcEnabled, setMcEnabled] = useState(false);
   const [mcRunning, setMcRunning] = useState(false);
   const [mcResults, setMcResults] = useState<MonteCarloResults | null>(null);
   const [historicalResults, setHistoricalResults] = useState<HistoricalSequenceResult[]>([]);
 
+  // When view changes, reset what-if and MC
+  useEffect(() => {
+    setWhatIfResults(null);
+    setMcEnabled(false);
+    setMcResults(null);
+    setHistoricalResults([]);
+  }, [view]);
+
+  // Determine active results / inputs based on view
+  const activeResults: FireResults | null =
+    view === "spouse" ? spouseResults :
+    view === "combined" ? unifiedResults :
+    results;
+
+  const activeInputs: FireInputs = useMemo(() => {
+    if (view === "spouse") return spouseInputs;
+    if (view === "combined") return mergeInputs(inputs, spouseInputs);
+    return inputs;
+  }, [view, inputs, spouseInputs]);
+
   const handleWhatIfChange = useCallback((r: FireResults | null) => {
     setWhatIfResults(r);
   }, []);
 
-  // Run MC when enabled (deferred to avoid blocking render)
+  // Run MC when enabled
   useEffect(() => {
-    if (!mcEnabled || !results) { setMcResults(null); setHistoricalResults([]); return; }
+    if (!mcEnabled || !activeResults) {
+      setMcResults(null);
+      setHistoricalResults((prev) => prev.length > 0 ? [] : prev);
+      return;
+    }
     setMcRunning(true);
     const id = setTimeout(() => {
-      const mc = runMonteCarlo(inputs);
-      const hist = HISTORICAL_SCENARIOS.map((s) => runHistoricalSequence(inputs, s));
+      const mc = runMonteCarlo(activeInputs);
+      const hist = HISTORICAL_SCENARIOS.map((s) => runHistoricalSequence(activeInputs, s));
       setMcResults(mc);
       setHistoricalResults(hist);
       setMcRunning(false);
     }, 0);
     return () => clearTimeout(id);
-  }, [mcEnabled, results, inputs]);
+  }, [mcEnabled, activeResults, activeInputs]);
 
   if (!results) return null;
+  if (!activeResults) return null;
 
-  const realAnnualReturn = (1 + inputs.expectedReturn) / (1 + inputs.inflationRate) - 1;
+  const realAnnualReturn = (1 + activeInputs.expectedReturn) / (1 + activeInputs.inflationRate) - 1;
 
-  const fireAgeDisplay = results.fireAge ? `Age ${results.fireAge}` : "Not reached";
-  const yearsDisplay = results.yearsToFire ? `${results.yearsToFire} yrs` : "—";
-  const gapPositive = results.gapAtTargetAge >= 0;
+  const fireAgeDisplay = activeResults.fireAge ? `Age ${activeResults.fireAge}` : "Not reached";
+  const yearsDisplay = activeResults.yearsToFire ? `${activeResults.yearsToFire} yrs` : "—";
+  const gapPositive = activeResults.gapAtTargetAge >= 0;
 
   const monthlyRetirementSalary =
-    inputs.monthlyRetirementSalary ?? inputs.retirementSpending / 12;
-  const pvLabel = results.requiredCorpusPV > 0
-    ? formatCurrency(results.requiredCorpusPV)
+    activeInputs.monthlyRetirementSalary ?? activeInputs.retirementSpending / 12;
+  const pvLabel = activeResults.requiredCorpusPV > 0
+    ? formatCurrency(activeResults.requiredCorpusPV)
     : "—";
-  const depletionDisplay = results.depletionAge
-    ? `Age ${results.depletionAge}`
-    : `${inputs.lifeExpectancy}+`;
-  const nominalMonthly = results.nominalRetirementSalary;
+  const depletionDisplay = activeResults.depletionAge
+    ? `Age ${activeResults.depletionAge}`
+    : `${activeInputs.lifeExpectancy}+`;
+  const nominalMonthly = activeResults.nominalRetirementSalary;
+
+  const viewLabel =
+    view === "spouse" ? "Spouse's FIRE plan" :
+    view === "combined" ? "Combined household plan" :
+    "Your FIRE plan";
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6 pb-16">
       {/* FIRE celebration — renders once if fireAge is set */}
-      <FireCelebration fireAge={results.fireAge} />
+      <FireCelebration fireAge={activeResults.fireAge} />
 
       {/* Header */}
       <motion.div
@@ -78,6 +112,27 @@ export function ResultsDashboard() {
         animate={{ opacity: 1, y: 0 }}
         className="py-4 space-y-3"
       >
+        {/* You / Spouse / Combined view switcher */}
+        {includeSpouse && spouseResults && (
+          <div className="flex justify-center">
+            <div className="flex gap-1 p-1 bg-muted rounded-lg">
+              {(["you", "spouse", "combined"] as ResultView[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                    view === v
+                      ? "bg-background text-foreground shadow-sm font-medium"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {v === "you" ? "You" : v === "spouse" ? "Spouse" : "Combined"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Action buttons row */}
         <div className="flex flex-wrap items-center justify-center gap-2">
           <button
@@ -93,8 +148,8 @@ export function ResultsDashboard() {
               : <Shuffle className="w-3.5 h-3.5" />}
             Certainty Check
           </button>
-          <ShareButton results={results} inputs={inputs} />
-          <SavePlanButton inputs={inputs} />
+          <ShareButton results={activeResults} inputs={activeInputs} />
+          <SavePlanButton inputs={activeInputs} />
           <PlansDrawer />
           <button
             onClick={editInputs}
@@ -106,32 +161,32 @@ export function ResultsDashboard() {
         </div>
 
         <div className="text-center">
-        <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">
-          Your FIRE plan
-        </p>
-        <h1 className="text-4xl sm:text-5xl font-bold text-primary tabular-nums">
-          {formatCurrency(results.fireNumber)}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-2">
-          Withdrawal-rate target · PV corpus{" "}
-          <span className="text-foreground font-medium">{pvLabel}</span>
-        </p>
-        {/* MC success rate badge */}
-        {mcResults && !mcRunning && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full text-xs font-semibold border"
-            style={{
-              borderColor: mcResults.successRate >= 0.9 ? "oklch(0.65 0.18 150 / 50%)" : mcResults.successRate >= 0.75 ? "oklch(0.76 0.155 75 / 50%)" : "oklch(0.65 0.20 25 / 50%)",
-              background: mcResults.successRate >= 0.9 ? "oklch(0.65 0.18 150 / 10%)" : mcResults.successRate >= 0.75 ? "oklch(0.76 0.155 75 / 10%)" : "oklch(0.65 0.20 25 / 10%)",
-              color: mcResults.successRate >= 0.9 ? "oklch(0.65 0.18 150)" : mcResults.successRate >= 0.75 ? "oklch(0.76 0.155 75)" : "oklch(0.65 0.20 25)",
-            }}
-          >
-            <Shuffle className="w-3 h-3" />
-            {Math.round(mcResults.successRate * 100)}% chance of not running out
-          </motion.div>
-        )}
+          <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">
+            {viewLabel}
+          </p>
+          <h1 className="text-4xl sm:text-5xl font-bold text-primary tabular-nums">
+            {formatCurrency(activeResults.fireNumber)}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-2">
+            Withdrawal-rate target · PV corpus{" "}
+            <span className="text-foreground font-medium">{pvLabel}</span>
+          </p>
+          {/* MC success rate badge */}
+          {mcResults && !mcRunning && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full text-xs font-semibold border"
+              style={{
+                borderColor: mcResults.successRate >= 0.9 ? "oklch(0.65 0.18 150 / 50%)" : mcResults.successRate >= 0.75 ? "oklch(0.76 0.155 75 / 50%)" : "oklch(0.65 0.20 25 / 50%)",
+                background: mcResults.successRate >= 0.9 ? "oklch(0.65 0.18 150 / 10%)" : mcResults.successRate >= 0.75 ? "oklch(0.76 0.155 75 / 10%)" : "oklch(0.65 0.20 25 / 10%)",
+                color: mcResults.successRate >= 0.9 ? "oklch(0.65 0.18 150)" : mcResults.successRate >= 0.75 ? "oklch(0.76 0.155 75)" : "oklch(0.65 0.20 25)",
+              }}
+            >
+              <Shuffle className="w-3 h-3" />
+              {Math.round(mcResults.successRate * 100)}% chance of not running out
+            </motion.div>
+          )}
         </div>
       </motion.div>
 
@@ -139,7 +194,7 @@ export function ResultsDashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <StatCard
           label="FIRE number"
-          value={formatCurrency(results.fireNumber)}
+          value={formatCurrency(activeResults.fireNumber)}
           gold
           delay={0}
           icon={<Flame className="w-4 h-4" />}
@@ -148,8 +203,8 @@ export function ResultsDashboard() {
           label="Retire at"
           value={fireAgeDisplay}
           subValue={
-            results.fireAge
-              ? `Year ${new Date().getFullYear() + Math.round(results.fireAge - inputs.currentAge)}`
+            activeResults.fireAge
+              ? `Year ${new Date().getFullYear() + Math.round(activeResults.fireAge - activeInputs.currentAge)}`
               : undefined
           }
           highlight
@@ -159,13 +214,13 @@ export function ResultsDashboard() {
         <StatCard
           label="Years to FIRE"
           value={yearsDisplay}
-          subValue={`From age ${inputs.currentAge}`}
+          subValue={`From age ${activeInputs.currentAge}`}
           delay={0.12}
           icon={<Clock className="w-4 h-4" />}
         />
         <StatCard
           label="Savings rate"
-          value={formatPct(results.currentSavingsRate)}
+          value={formatPct(activeResults.currentSavingsRate)}
           subValue="of after-tax income"
           delay={0.18}
           icon={<TrendingUp className="w-4 h-4" />}
@@ -180,7 +235,7 @@ export function ResultsDashboard() {
         <StatCard
           label="Money lasts until"
           value={depletionDisplay}
-          subValue={results.depletionAge ? "corpus depletes" : "past life expectancy"}
+          subValue={activeResults.depletionAge ? "corpus depletes" : "past life expectancy"}
           delay={0.30}
           icon={<Hourglass className="w-4 h-4" />}
         />
@@ -203,7 +258,7 @@ export function ResultsDashboard() {
                 target =
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Inflation-adjusted at age {inputs.retirementAge}
+                Inflation-adjusted at age {activeInputs.retirementAge}
               </p>
             </div>
           </div>
@@ -228,13 +283,13 @@ export function ResultsDashboard() {
           <div className="text-sm">
             <p className="font-medium text-warning">Shortfall at target retirement age</p>
             <p className="text-muted-foreground text-xs mt-0.5">
-              You&apos;ll be{" "}
+              {view === "spouse" ? "Spouse will be" : "You'll be"}{" "}
               <span className="text-foreground font-medium">
-                {formatCurrency(Math.abs(results.gapAtTargetAge))}
+                {formatCurrency(Math.abs(activeResults.gapAtTargetAge))}
               </span>{" "}
-              short of your FIRE number at age {inputs.retirementAge}.{" "}
-              {results.fireAge
-                ? `You hit FIRE at age ${results.fireAge} instead.`
+              short of the FIRE number at age {activeInputs.retirementAge}.{" "}
+              {activeResults.fireAge
+                ? `FIRE is reached at age ${activeResults.fireAge} instead.`
                 : "Consider increasing savings or reducing spending."}
             </p>
           </div>
@@ -251,19 +306,21 @@ export function ResultsDashboard() {
           <div className="text-sm">
             <p className="font-medium text-success">On track — with a cushion!</p>
             <p className="text-muted-foreground text-xs mt-0.5">
-              At age {inputs.retirementAge}, you&apos;ll have{" "}
+              At age {activeInputs.retirementAge},{" "}
+              {view === "combined" ? "the household" : view === "spouse" ? "spouse" : "you"}{" "}
+              will have{" "}
               <span className="text-foreground font-medium">
-                {formatCurrency(results.gapAtTargetAge)}
+                {formatCurrency(activeResults.gapAtTargetAge)}
               </span>{" "}
-              more than your FIRE number. That&apos;s a{" "}
-              {formatPct(results.gapAtTargetAge / results.fireNumber)} buffer.
+              more than the FIRE number. That&apos;s a{" "}
+              {formatPct(activeResults.gapAtTargetAge / activeResults.fireNumber)} buffer.
             </p>
           </div>
         </motion.div>
       )}
 
       {/* PV vs WR callout */}
-      {Math.abs(results.requiredCorpusPV - results.fireNumber) / results.fireNumber > 0.05 && (
+      {Math.abs(activeResults.requiredCorpusPV - activeResults.fireNumber) / activeResults.fireNumber > 0.05 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -273,26 +330,26 @@ export function ResultsDashboard() {
           <p className="font-medium text-primary mb-1">Withdrawal-rate vs PV corpus</p>
           <p className="text-muted-foreground text-xs">
             The 4% rule gives{" "}
-            <span className="text-foreground font-medium">{formatCurrency(results.fireNumber)}</span>.
+            <span className="text-foreground font-medium">{formatCurrency(activeResults.fireNumber)}</span>.
             The PV formula — funding{" "}
             <span className="text-foreground font-medium">
               {formatCurrency(monthlyRetirementSalary)}/mo
             </span>{" "}
-            for {inputs.lifeExpectancy - inputs.retirementAge} years — gives{" "}
+            for {activeInputs.lifeExpectancy - activeInputs.retirementAge} years — gives{" "}
             <span className="text-foreground font-medium">{pvLabel}</span>.
-            {results.requiredCorpusPV < results.fireNumber
+            {activeResults.requiredCorpusPV < activeResults.fireNumber
               ? " PV says you need less; the 4% rule is more conservative."
               : " PV says you need more; a lower real return demands a larger corpus."}
           </p>
         </motion.div>
       )}
 
-      {/* Chart — shows what-if overlay and MC fan when active */}
+      {/* Chart */}
       <PortfolioChart
-        rows={results.yearlyRows}
-        fireNumber={results.fireNumber}
-        fireAge={results.fireAge}
-        retirementAge={inputs.retirementAge}
+        rows={activeResults.yearlyRows}
+        fireNumber={activeResults.fireNumber}
+        fireAge={activeResults.fireAge}
+        retirementAge={activeInputs.retirementAge}
         whatIfRows={whatIfResults?.yearlyRows}
         whatIfFireAge={whatIfResults?.fireAge}
         monteCarloRows={mcResults?.percentileRows}
@@ -300,8 +357,8 @@ export function ResultsDashboard() {
 
       {/* What-if explorer */}
       <WhatIfPanel
-        baseInputs={inputs}
-        baseResults={results}
+        baseInputs={activeInputs}
+        baseResults={activeResults}
         onWhatIfChange={handleWhatIfChange}
       />
 
@@ -315,37 +372,37 @@ export function ResultsDashboard() {
           <MonteCarloPanel
             mc={mcResults}
             historicalResults={historicalResults}
-            retirementAge={inputs.retirementAge}
-            lifeExpectancy={inputs.lifeExpectancy}
+            retirementAge={activeInputs.retirementAge}
+            lifeExpectancy={activeInputs.lifeExpectancy}
           />
         </motion.div>
       )}
 
       {/* Account sequencing */}
       <AccountSequencingPanel
-        seq={results.accountSequencing}
-        retirementAge={inputs.retirementAge}
+        seq={activeResults.accountSequencing}
+        retirementAge={activeInputs.retirementAge}
       />
 
       {/* FIRE variants */}
       <div className="glass rounded-2xl p-5">
         <FireVariants
-          results={results}
-          currentAge={inputs.currentAge}
+          results={activeResults}
+          currentAge={activeInputs.currentAge}
           realAnnualReturn={realAnnualReturn}
         />
       </div>
 
       {/* Retirement age sensitivity table */}
-      {results.retirementSensitivity?.length > 0 && (
+      {activeResults.retirementSensitivity?.length > 0 && (
         <SensitivityTable
-          rows={results.retirementSensitivity}
-          plannedRetirementAge={inputs.retirementAge}
+          rows={activeResults.retirementSensitivity}
+          plannedRetirementAge={activeInputs.retirementAge}
         />
       )}
 
       {/* Year-by-year table */}
-      <YearlyTable rows={results.yearlyRows} fireAge={results.fireAge} />
+      <YearlyTable rows={activeResults.yearlyRows} fireAge={activeResults.fireAge} />
     </div>
   );
 }
