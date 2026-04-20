@@ -59,6 +59,16 @@ function Section({
 export function StepPortfolio() {
   const { inputs, updateInputs } = useFireStore();
   const { assets, inflationRate } = inputs;
+  const [expandedAssets, setExpandedAssets] = useState<Set<number>>(new Set([0]));
+
+  const toggleAsset = (idx: number) => {
+    setExpandedAssets((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
 
   const totalNetWorth = assets.reduce((s, a) => s + a.value, 0);
   const totalMonthlyContributions = assets.reduce((s, a) => s + (a.monthlyContribution ?? 0), 0);
@@ -75,10 +85,17 @@ export function StepPortfolio() {
     });
   };
   const addAsset = () => {
-    updateInputs({ assets: [...assets, { label: "New Asset", value: 0, annualReturn: 0.07, accountType: "taxable" }] });
+    const newIdx = assets.length;
+    updateInputs({ assets: [...assets, { label: "Stocks / Equity", value: 0, annualReturn: 0.10, accountType: "taxable" }] });
+    setExpandedAssets((prev) => new Set([...prev, newIdx]));
   };
   const removeAsset = (idx: number) => {
     updateInputs({ assets: assets.filter((_, i) => i !== idx) });
+    setExpandedAssets((prev) => {
+      const next = new Set<number>();
+      prev.forEach((i) => { if (i < idx) next.add(i); else if (i > idx) next.add(i - 1); });
+      return next;
+    });
   };
 
   return (
@@ -103,102 +120,137 @@ export function StepPortfolio() {
 
       {/* Asset rows */}
       <div className="space-y-3">
-        {assets.map((asset, idx) => (
-          <div key={idx} className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <select
-                value={asset.label}
-                onChange={(e) => {
-                  const preset = ASSET_PRESETS.find((p) => p.label === e.target.value);
-                  updateAsset(idx, {
-                    label: e.target.value,
-                    ...(preset ? { annualReturn: preset.annualReturn, accountType: preset.accountType } : {}),
-                  });
-                }}
-                className="flex-1 bg-transparent text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary rounded px-1 py-0.5 border border-border"
-              >
-                {ASSET_PRESETS.map((p) => (
-                  <option key={p.label} value={p.label}>{p.label}</option>
-                ))}
-                {!ASSET_PRESETS.find((p) => p.label === asset.label) && (
-                  <option value={asset.label}>{asset.label}</option>
+        {assets.map((asset, idx) => {
+          const isOpen = expandedAssets.has(idx);
+          return (
+            <div key={idx} className="rounded-xl border border-border bg-muted/20 overflow-hidden">
+              {/* Collapsible header */}
+              <div className="flex items-center gap-2 px-4 py-3">
+                <button
+                  onClick={() => toggleAsset(idx)}
+                  className="flex-1 flex items-center gap-2 text-left min-w-0"
+                >
+                  {isOpen
+                    ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                    : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+                  <span className="text-sm font-medium truncate">{asset.label}</span>
+                  {!isOpen && asset.value > 0 && (
+                    <span className="text-xs text-muted-foreground ml-1 shrink-0">
+                      {formatCurrency(asset.value)}
+                    </span>
+                  )}
+                </button>
+                {!isOpen && (
+                  <div className="shrink-0">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${ACCOUNT_TYPE_LABELS[asset.accountType ?? "taxable"].bg}`}>
+                      {ACCOUNT_TYPE_LABELS[asset.accountType ?? "taxable"].label}
+                    </span>
+                  </div>
                 )}
-              </select>
-              <button
-                onClick={() => removeAsset(idx)}
-                disabled={assets.length <= 1}
-                className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-30"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Account type toggle */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Account type:</span>
-              <div className="flex gap-1">
-                {(["taxable", "roth", "traditional"] as AccountType[]).map((t) => {
-                  const cfg = ACCOUNT_TYPE_LABELS[t];
-                  const active = (asset.accountType ?? "taxable") === t;
-                  return (
-                    <button
-                      key={t}
-                      onClick={() => updateAsset(idx, { accountType: t })}
-                      className={`text-xs px-2 py-0.5 rounded-full transition-colors border ${
-                        active
-                          ? `${cfg.bg} border-current`
-                          : "border-border text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {cfg.label}
-                    </button>
-                  );
-                })}
+                <button
+                  onClick={() => removeAsset(idx)}
+                  disabled={assets.length <= 1}
+                  className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-30 shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <NumberField
-                label="Current value"
-                value={asset.value}
-                onChange={(v) => updateAsset(idx, { value: v })}
-                prefix="$"
-                format="currency"
-              />
-              <NumberField
-                label="Annual return"
-                value={asset.annualReturn}
-                onChange={(v) => updateAsset(idx, { annualReturn: v })}
-                format="percent"
-                suffix="%/yr"
-                min={0}
-                max={0.3}
-              />
-              <NumberField
-                label="Monthly investment"
-                value={asset.monthlyContribution ?? 0}
-                onChange={(v) => updateAsset(idx, { monthlyContribution: v || undefined })}
-                prefix="$"
-                format="currency"
-                hint="Ongoing monthly contribution to this asset"
-              />
-            </div>
+              {/* Expanded content */}
+              {isOpen && (
+                <div className="px-4 pb-4 space-y-3 border-t border-border/50 pt-3">
+                  {/* Asset type selector */}
+                  <select
+                    value={asset.label}
+                    onChange={(e) => {
+                      const preset = ASSET_PRESETS.find((p) => p.label === e.target.value);
+                      updateAsset(idx, {
+                        label: e.target.value,
+                        ...(preset ? { annualReturn: preset.annualReturn, accountType: preset.accountType } : {}),
+                      });
+                    }}
+                    className="w-full bg-transparent text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary rounded px-2 py-1.5 border border-border"
+                  >
+                    {ASSET_PRESETS.map((p) => (
+                      <option key={p.label} value={p.label}>{p.label}</option>
+                    ))}
+                    {!ASSET_PRESETS.find((p) => p.label === asset.label) && (
+                      <option value={asset.label}>{asset.label}</option>
+                    )}
+                  </select>
 
-            {totalNetWorth > 0 && (
-              <div className="space-y-1">
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-primary/60 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (asset.value / totalNetWorth) * 100)}%` }}
-                  />
+                  {/* Account type toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Account type:</span>
+                    <div className="flex gap-1">
+                      {(["taxable", "roth", "traditional"] as AccountType[]).map((t) => {
+                        const cfg = ACCOUNT_TYPE_LABELS[t];
+                        const active = (asset.accountType ?? "taxable") === t;
+                        return (
+                          <button
+                            key={t}
+                            onClick={() => updateAsset(idx, { accountType: t })}
+                            className={`text-xs px-2 py-0.5 rounded-full transition-colors border ${
+                              active
+                                ? `${cfg.bg} border-current`
+                                : "border-border text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {cfg.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <NumberField
+                      label="Current value"
+                      value={asset.value}
+                      onChange={(v) => updateAsset(idx, { value: v })}
+                      prefix="$"
+                      format="currency"
+                      placeholder="e.g. 50,000"
+                    />
+                    <NumberField
+                      label="Annual return"
+                      value={asset.annualReturn}
+                      onChange={(v) => updateAsset(idx, { annualReturn: v })}
+                      format="percent"
+                      suffix="%/yr"
+                      min={0}
+                      max={0.3}
+                      placeholder="e.g. 10"
+                    />
+                    <NumberField
+                      label="Monthly investment"
+                      value={asset.monthlyContribution ?? 0}
+                      onChange={(v) => updateAsset(idx, { monthlyContribution: v || undefined })}
+                      prefix="$"
+                      format="currency"
+                      placeholder="e.g. 500"
+                      hint="Ongoing monthly contribution to this asset"
+                    />
+                  </div>
+
+                  {totalNetWorth > 0 && (
+                    <div className="space-y-1">
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full bg-primary/60 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(100, (asset.value / totalNetWorth) * 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground text-right">
+                        {((asset.value / totalNetWorth) * 100).toFixed(1)}% of net worth
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground text-right">
-                  {((asset.value / totalNetWorth) * 100).toFixed(1)}% of net worth
-                </p>
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
 
         <button
           onClick={addAsset}
@@ -219,6 +271,7 @@ export function StepPortfolio() {
         suffix="%/yr"
         min={0}
         max={0.1}
+        placeholder="e.g. 3"
         hint="Historical average ~3%. All returns are nominal; engine converts to real."
       />
 

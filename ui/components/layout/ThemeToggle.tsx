@@ -2,26 +2,32 @@
 import { Sun, Moon } from "lucide-react";
 import { useEffect, useState } from "react";
 
+function applyTheme(dark: boolean) {
+  const html = document.documentElement;
+  if (dark) {
+    html.classList.add("dark");
+    localStorage.setItem("theme", "dark");
+  } else {
+    html.classList.remove("dark");
+    localStorage.setItem("theme", "light");
+  }
+}
+
 export function ThemeToggle() {
-  const [mounted, setMounted] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState<boolean | null>(null);
 
   useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
-    setMounted(true);
+    const stored = localStorage.getItem("theme");
+    const dark = stored !== "light";
+    // Ensure DOM matches localStorage (covers any reconciliation that stripped the class)
+    applyTheme(dark);
+    setIsDark(dark);
   }, []);
 
   const toggle = () => {
-    const html = document.documentElement;
-    if (isDark) {
-      html.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-      setIsDark(false);
-    } else {
-      html.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-      setIsDark(true);
-    }
+    const next = !isDark;
+    applyTheme(next);
+    setIsDark(next);
   };
 
   return (
@@ -30,8 +36,10 @@ export function ThemeToggle() {
       aria-label="Toggle theme"
       className="flex items-center justify-center w-9 h-9 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
     >
-      {mounted ? (
-        isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />
+      {isDark === null ? (
+        <Moon className="w-4 h-4" />
+      ) : isDark ? (
+        <Sun className="w-4 h-4" />
       ) : (
         <Moon className="w-4 h-4" />
       )}

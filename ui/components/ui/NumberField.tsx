@@ -12,12 +12,14 @@ interface NumberFieldProps {
   prefix?: string;
   suffix?: string;
   hint?: string;
+  placeholder?: string;
+  error?: string;
   icon?: React.ReactNode;
   format?: "number" | "currency" | "percent";
   className?: string;
 }
 
-function displayValue(value: number, format: string, prefix?: string): string {
+function displayValue(value: number, format: string): string {
   if (format === "currency") {
     return new Intl.NumberFormat("en-US").format(value);
   }
@@ -45,6 +47,8 @@ export function NumberField({
   prefix,
   suffix,
   hint,
+  placeholder,
+  error,
   icon,
   format = "number",
   className,
@@ -52,15 +56,19 @@ export function NumberField({
   const [focused, setFocused] = useState(false);
   const [raw, setRaw] = useState("");
 
-  const displayed = focused ? raw : displayValue(value, format, prefix);
+  const displayed = focused ? raw : (value === 0 ? "" : displayValue(value, format));
 
   const handleFocus = () => {
     setFocused(true);
-    setRaw(displayValue(value, format, prefix));
+    setRaw(value === 0 ? "" : displayValue(value, format));
   };
 
   const handleBlur = () => {
     setFocused(false);
+    if (!raw.trim()) {
+      onChange(0);
+      return;
+    }
     const parsed = parseValue(raw, format);
     const clamped =
       min !== undefined && max !== undefined
@@ -83,6 +91,8 @@ export function NumberField({
           "flex items-center gap-2 rounded-xl border bg-input px-3 py-2.5 transition-all duration-200",
           focused
             ? "border-primary ring-2 ring-primary/20"
+            : error
+            ? "border-destructive ring-1 ring-destructive/20"
             : "border-border hover:border-border/80"
         )}
       >
@@ -101,13 +111,17 @@ export function NumberField({
           onFocus={handleFocus}
           onBlur={handleBlur}
           onChange={handleChange}
-          className="flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/50"
+          placeholder={placeholder}
+          className="flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/40 placeholder:font-normal"
         />
         {suffix && (
           <span className="text-muted-foreground text-xs shrink-0">{suffix}</span>
         )}
       </div>
-      {hint && (
+      {error && (
+        <p className="text-xs text-destructive mt-1">{error}</p>
+      )}
+      {!error && hint && (
         <p className="text-xs text-muted-foreground/70 mt-1">{hint}</p>
       )}
     </div>

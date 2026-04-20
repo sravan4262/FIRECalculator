@@ -1,5 +1,6 @@
 "use client";
 import { useFireStore } from "@/lib/store";
+import { useValidationErrors } from "@/lib/ValidationContext";
 import { NumberField } from "@/components/ui/NumberField";
 import { Slider } from "@/components/ui/slider";
 import { formatCurrency } from "@/lib/utils";
@@ -7,8 +8,9 @@ import { Zap } from "lucide-react";
 
 export function StepScenarios() {
   const { inputs, updateInputs } = useFireStore();
+  const errors = useValidationErrors();
 
-  const fireNumber = inputs.retirementSpending / inputs.withdrawalRate;
+  const fireNumber = inputs.withdrawalRate > 0 ? inputs.retirementSpending / inputs.withdrawalRate : 0;
 
   return (
     <div className="space-y-6">
@@ -25,10 +27,12 @@ export function StepScenarios() {
           Your FIRE number
         </p>
         <p className="text-4xl font-bold text-primary tabular-nums">
-          {formatCurrency(fireNumber)}
+          {fireNumber > 0 ? formatCurrency(fireNumber) : "—"}
         </p>
         <p className="text-xs text-muted-foreground mt-2">
-          {formatCurrency(inputs.retirementSpending)} ÷ {(inputs.withdrawalRate * 100).toFixed(1)}% withdrawal rate
+          {inputs.retirementSpending > 0 && inputs.withdrawalRate > 0
+            ? `${formatCurrency(inputs.retirementSpending)} ÷ ${(inputs.withdrawalRate * 100).toFixed(1)}% withdrawal rate`
+            : "Enter retirement spending and withdrawal rate above"}
         </p>
       </div>
 
@@ -58,7 +62,9 @@ export function StepScenarios() {
           onChange={(v) => updateInputs({ retirementSpending: v })}
           prefix="$"
           format="currency"
+          placeholder="e.g. 60,000"
           hint="Your target annual spend in retirement (today's dollars)"
+          error={errors.retirementSpending}
         />
       </div>
 

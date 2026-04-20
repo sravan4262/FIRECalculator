@@ -1,10 +1,12 @@
 "use client";
 import { useFireStore } from "@/lib/store";
+import { useValidationErrors } from "@/lib/ValidationContext";
 import { NumberField } from "@/components/ui/NumberField";
 import { User, Calendar, Clock } from "lucide-react";
 
 export function StepYou() {
   const { inputs, updateInputs } = useFireStore();
+  const errors = useValidationErrors();
 
   return (
     <div className="space-y-6">
@@ -24,7 +26,9 @@ export function StepYou() {
           min={18}
           max={80}
           suffix="years"
+          placeholder="e.g. 30"
           hint="Your age today"
+          error={errors.currentAge}
         />
         <NumberField
           label="Target retirement age"
@@ -34,7 +38,9 @@ export function StepYou() {
           min={inputs.currentAge + 1}
           max={80}
           suffix="years"
+          placeholder="e.g. 50"
           hint="When you want to stop working"
+          error={errors.retirementAge}
         />
         <NumberField
           label="Life expectancy"
@@ -44,7 +50,9 @@ export function StepYou() {
           min={inputs.retirementAge + 1}
           max={110}
           suffix="years"
+          placeholder="e.g. 90"
           hint="Planning horizon — use 90+ to be safe"
+          error={errors.lifeExpectancy}
         />
       </div>
 

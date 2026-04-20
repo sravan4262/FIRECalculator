@@ -1,5 +1,6 @@
 "use client";
 import { useFireStore, currentMonthStr } from "@/lib/store";
+import { useValidationErrors } from "@/lib/ValidationContext";
 import { NumberField } from "@/components/ui/NumberField";
 import { useState } from "react";
 import {
@@ -36,6 +37,7 @@ function Section({
 
 export function StepIncome() {
   const { inputs, updateInputs } = useFireStore();
+  const errors = useValidationErrors();
 
   const savingsRate =
     inputs.afterTaxIncome > 0
@@ -95,6 +97,7 @@ export function StepIncome() {
           onChange={(v) => updateInputs({ grossIncome: v })}
           prefix="$"
           format="currency"
+          placeholder="e.g. 120,000"
           hint="Before taxes and deductions"
         />
         <NumberField
@@ -104,7 +107,9 @@ export function StepIncome() {
           onChange={(v) => updateInputs({ afterTaxIncome: v })}
           prefix="$"
           format="currency"
+          placeholder="e.g. 90,000"
           hint="Take-home pay you actually receive"
+          error={errors.afterTaxIncome}
         />
         <NumberField
           label="Annual spending"
@@ -113,7 +118,9 @@ export function StepIncome() {
           onChange={(v) => updateInputs({ currentSpending: v })}
           prefix="$"
           format="currency"
+          placeholder="e.g. 60,000"
           hint="What you actually spend each year"
+          error={errors.currentSpending}
         />
         <NumberField
           label="Salary growth rate"
@@ -124,6 +131,7 @@ export function StepIncome() {
           suffix="%/yr"
           min={0}
           max={0.3}
+          placeholder="e.g. 3"
           hint="Expected annual raise (e.g. 3%)"
         />
       </div>

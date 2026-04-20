@@ -63,8 +63,15 @@ export function LivePreviewPanel({ step }: { step: number }) {
   const onTrack = annualSavings / 12 >= monthlySavingsNeeded && monthlySavingsNeeded > 0;
   const isUnlocked = step >= FIRE_NUMBER_UNLOCKED_STEP;
 
-  // Projected portfolio value at retirement (simple compound growth, no contributions)
-  const projectedPortfolio = totalPortfolio * Math.pow(1 + blendedReturn, yearsToRetirement);
+  // Projected portfolio: FV of current balance + FV of all ongoing monthly inflows
+  const totalMonthlyContributions = inputs.assets.reduce((sum, a) => sum + (a.monthlyContribution ?? 0), 0);
+  const baseMonthlyFromIncome = Math.max(0, inputs.afterTaxIncome - inputs.currentSpending) / 12;
+  const totalMonthlyIn = totalMonthlyContributions + baseMonthlyFromIncome + streamsAnnual / 12;
+  const n = yearsToRetirement * 12;
+  const r = blendedReturn / 12;
+  const projectedPortfolio =
+    totalPortfolio * Math.pow(1 + r, n) +
+    (r > 0 ? (totalMonthlyIn * (Math.pow(1 + r, n) - 1)) / r : totalMonthlyIn * n);
 
   return (
     <div className="hidden lg:flex flex-col gap-4 sticky top-24 self-start">
@@ -240,11 +247,13 @@ export function LivePreviewPanel({ step }: { step: number }) {
                   {formatCurrency(projectedPortfolio, true)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Portfolio alone in {yearsToRetirement} yrs at {(blendedReturn * 100).toFixed(1)}%
+                  In {yearsToRetirement} yrs at {(blendedReturn * 100).toFixed(1)}%
                 </p>
-                <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border">
-                  + contributions will be added on top
-                </p>
+                {totalMonthlyIn > 0 && (
+                  <p className="text-xs text-primary mt-2 pt-2 border-t border-border">
+                    + {formatCurrency(totalMonthlyIn, true)}/mo in contributions
+                  </p>
+                )}
               </div>
             </>
           )}

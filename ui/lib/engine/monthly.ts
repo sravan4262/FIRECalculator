@@ -109,28 +109,33 @@ export function calculateFireMonthly(inputs: FireInputs): FireResults {
   const monthlyRetirementSalary =
     inputs.monthlyRetirementSalary ?? retirementSpending / 12;
 
+  // ── Sensible fallbacks for unset fields ───────────────────────────────────
+  const effectiveWithdrawalRate = withdrawalRate > 0 ? withdrawalRate : 0.04;
+  const effectiveExpectedReturn = expectedReturn > 0 ? expectedReturn : 0.07;
+  const effectiveInflationRate  = inflationRate  > 0 ? inflationRate  : 0.03;
+
   // ── Rate conversions ───────────────────────────────────────────────────────
-  const monthlyInflation = Math.pow(1 + inflationRate, 1 / 12) - 1;
-  const realAnnualReturn = (1 + expectedReturn) / (1 + inflationRate) - 1;
+  const monthlyInflation = Math.pow(1 + effectiveInflationRate, 1 / 12) - 1;
+  const realAnnualReturn = (1 + effectiveExpectedReturn) / (1 + effectiveInflationRate) - 1;
   const realMonthlyReturn = Math.pow(1 + realAnnualReturn, 1 / 12) - 1;
 
   // ── Per-asset real monthly returns ────────────────────────────────────────
   const effectiveAssets =
     assets.length > 0
       ? assets.map((a) => ({ ...a }))
-      : [{ label: "Portfolio", value: currentPortfolio, annualReturn: expectedReturn }];
+      : [{ label: "Portfolio", value: currentPortfolio, annualReturn: effectiveExpectedReturn }];
 
   const assetNetMonthlyReturns = effectiveAssets.map((a) => {
-    const mr = Math.pow(1 + a.annualReturn, 1 / 12) - 1;
+    const mr = Math.pow(1 + (a.annualReturn > 0 ? a.annualReturn : effectiveExpectedReturn), 1 / 12) - 1;
     return (1 + mr) / (1 + monthlyInflation) - 1;
   });
 
   // ── FIRE / variant numbers ────────────────────────────────────────────────
-  const fireNumber = retirementSpending / withdrawalRate;
-  const leanFireNumber = (retirementSpending * LEAN_FIRE_MULTIPLIER) / withdrawalRate;
-  const fatFireNumber = (retirementSpending * FAT_FIRE_MULTIPLIER) / withdrawalRate;
+  const fireNumber = retirementSpending / effectiveWithdrawalRate;
+  const leanFireNumber = (retirementSpending * LEAN_FIRE_MULTIPLIER) / effectiveWithdrawalRate;
+  const fatFireNumber = (retirementSpending * FAT_FIRE_MULTIPLIER) / effectiveWithdrawalRate;
   const baristaFireNumber =
-    (retirementSpending * (1 - BARISTA_PART_TIME_INCOME)) / withdrawalRate;
+    (retirementSpending * (1 - BARISTA_PART_TIME_INCOME)) / effectiveWithdrawalRate;
 
   // ── PV corpus formula ─────────────────────────────────────────────────────
   const retirementMonths = (lifeExpectancy - retirementAge) * 12;

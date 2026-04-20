@@ -189,17 +189,19 @@ export function StepAdvanced() {
           onChange={(v) => updateInputs({ monthlyRetirementSalary: v, retirementSpending: v * 12 })}
           prefix="$"
           format="currency"
+          placeholder="e.g. 5,000"
           hint="Monthly take-home you need in retirement (today's dollars). Used for PV corpus."
         />
         <NumberField
-          label="Withdrawal rate"
+          label="Withdrawal rate (investments only)"
           value={inputs.withdrawalRate}
           onChange={(v) => updateInputs({ withdrawalRate: v })}
           format="percent"
           suffix="%"
           min={0.02}
           max={0.08}
-          hint="4% is the classic 'safe' withdrawal rate"
+          placeholder="e.g. 4"
+          hint="% of your invested portfolio you draw each year. 4% is the classic safe rate — at that rate your corpus is ₹Annual Spending ÷ 4% = 25× your yearly expenses. Cash savings are not included."
         />
       </Section>
 
@@ -326,25 +328,29 @@ export function StepAdvanced() {
           value={inputs.socialSecurityBenefit ?? 0}
           onChange={(v) => updateInputs({ socialSecurityBenefit: v })}
           prefix="$" format="currency"
+          placeholder="e.g. 18,000"
           hint="Annual SS benefit at your claiming age (from ssa.gov)"
         />
         <NumberField
           label="SS / NPS claiming age"
-          value={inputs.socialSecurityAge ?? 67}
+          value={inputs.socialSecurityAge ?? 0}
           onChange={(v) => updateInputs({ socialSecurityAge: v })}
           suffix="years" min={55} max={70}
+          placeholder="e.g. 67"
         />
         <NumberField
           label="Pension annual benefit"
           value={inputs.pensionBenefit ?? 0}
           onChange={(v) => updateInputs({ pensionBenefit: v })}
           prefix="$" format="currency"
+          placeholder="e.g. 12,000"
         />
         <NumberField
           label="Pension start age"
-          value={inputs.pensionStartAge ?? 65}
+          value={inputs.pensionStartAge ?? 0}
           onChange={(v) => updateInputs({ pensionStartAge: v })}
           suffix="years" min={50} max={75}
+          placeholder="e.g. 65"
         />
       </Section>
 
@@ -355,19 +361,22 @@ export function StepAdvanced() {
           value={inputs.healthcarePremium ?? 0}
           onChange={(v) => updateInputs({ healthcarePremium: v })}
           prefix="$" format="currency"
+          placeholder="e.g. 6,000"
           hint="ACA marketplace premiums before age 65"
         />
         <NumberField
           label="Healthcare inflation rate"
-          value={inputs.healthcareInflation ?? 0.05}
+          value={inputs.healthcareInflation ?? 0}
           onChange={(v) => updateInputs({ healthcareInflation: v })}
           format="percent" suffix="%/yr" min={0} max={0.15}
+          placeholder="e.g. 5"
         />
         <NumberField
           label="Medicare start age"
-          value={inputs.medicareAge ?? 65}
+          value={inputs.medicareAge ?? 0}
           onChange={(v) => updateInputs({ medicareAge: v })}
           suffix="years" min={60} max={70}
+          placeholder="e.g. 65"
         />
       </Section>
 
@@ -499,16 +508,18 @@ export function StepAdvanced() {
       <Section title="Tax assumptions" icon={<Shield className="w-4 h-4" />}>
         <NumberField
           label="Effective tax rate during retirement"
-          value={inputs.effectiveTaxRateRetirement ?? 0.12}
+          value={inputs.effectiveTaxRateRetirement ?? 0}
           onChange={(v) => updateInputs({ effectiveTaxRateRetirement: v })}
           format="percent" suffix="%" min={0} max={0.5}
+          placeholder="e.g. 12"
           hint="Effective rate on withdrawals in retirement"
         />
         <NumberField
           label="Effective tax rate now (accumulation)"
-          value={inputs.effectiveTaxRateAccumulation ?? 0.22}
+          value={inputs.effectiveTaxRateAccumulation ?? 0}
           onChange={(v) => updateInputs({ effectiveTaxRateAccumulation: v })}
           format="percent" suffix="%" min={0} max={0.5}
+          placeholder="e.g. 22"
         />
       </Section>
 
@@ -632,7 +643,8 @@ export function StepAdvanced() {
           onChange={(v) => updateInputs({ rothConversionAnnual: v })}
           prefix="$"
           format="currency"
-          hint="Set to $0 to skip. Requires Traditional account assets on the Portfolio step."
+          placeholder="e.g. 10,000"
+          hint="Leave blank to skip. Requires Traditional account assets on the Portfolio step."
         />
         {(inputs.rothConversionAnnual ?? 0) > 0 && (
           <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-xs text-muted-foreground space-y-1">
