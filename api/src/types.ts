@@ -29,3 +29,14 @@ export interface DbTrackerEntry {
   planned: string | null;
   actual: string | null;
 }
+
+export interface DbHomeCalcProfile {
+  id: string;
+  user_id: string;
+  name: string;
+  break_even: unknown;
+  mortgage: unknown;
+  affordability: unknown;
+  created_at: string;
+  updated_at: string;
+}

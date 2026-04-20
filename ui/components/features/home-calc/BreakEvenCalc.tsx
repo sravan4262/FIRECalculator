@@ -1,0 +1,217 @@
+"use client";
+import { useMemo, useState } from "react";
+import { NumberField } from "@/components/ui/NumberField";
+import {
+  buildBreakEvenTable,
+  breakEvenMonth,
+  computeBreakEvenRow,
+  fmt$,
+  fmtSigned,
+  fmtBreakEven,
+  pmt,
+} from "./lib/math";
+import type { BreakEvenInputs } from "./lib/types";
+
+const DEFAULTS: BreakEvenInputs = {
+  purchasePrice: 600000,
+  downPayment: 120000,
+  interestRate: 6.5,
+  loanTermYears: 30,
+  initialClosingCosts: 15000,
+  annualAppreciation: 3,
+  sellingCostPercent: 7,
+  annualPropertyTax: 12000,
+  annualInsurance: 2500,
+  annualMaintenance: 6000,
+  monthlyHOA: 0,
+  maxYears: 15,
+  monthlyRentSaved: 2500,
+  annualRentGrowth: 3,
+  opportunityCostRate: 6,
+  annualTaxBenefit: 0,
+};
+
+function StatCard({ label, value, hint, positive }: { label: string; value: string; hint: string; positive?: boolean }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 space-y-1">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className={`text-2xl font-bold font-mono tracking-tight ${positive === true ? "text-emerald-500" : positive === false ? "text-red-500" : ""}`}>
+        {value}
+      </p>
+      <p className="text-[11px] text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
+export function BreakEvenCalc({ inputs: externalInputs, onInputsChange }: {
+  inputs?: BreakEvenInputs;
+  onInputsChange?: (i: BreakEvenInputs) => void;
+}) {
+  const [local, setLocal] = useState<BreakEvenInputs>(DEFAULTS);
+  const [advOpen, setAdvOpen] = useState(false);
+
+  const inputs = externalInputs ?? local;
+  const set = (patch: Partial<BreakEvenInputs>) => {
+    const next = { ...inputs, ...patch };
+    setLocal(next);
+    onInputsChange?.(next);
+  };
+
+  const { rows, beBasic, beAdv, monthly, fiveYrAdv } = useMemo(() => {
+    const rows = buildBreakEvenTable(inputs);
+    const beBasic = breakEvenMonth(inputs, false);
+    const beAdv = breakEvenMonth(inputs, true);
+    const loanAmount = Math.max(0, inputs.purchasePrice - inputs.downPayment);
+    const monthly = pmt(loanAmount, inputs.interestRate, inputs.loanTermYears);
+    const fiveYrAdv = computeBreakEvenRow(inputs, 60).advancedNet;
+    return { rows, beBasic, beAdv, monthly, fiveYrAdv };
+  }, [inputs]);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
+      {/* ── Inputs ── */}
+      <div className="space-y-4">
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+          <div>
+            <h3 className="font-semibold text-sm">Calculator Inputs</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">How long before buying beats renting?</p>
+          </div>
+
+          <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5 text-xs text-muted-foreground">
+            <p className="font-semibold text-foreground text-[11px]">Start here</p>
+            <p>Compares what you put into the house against what you get back when you sell. Basic Net uses house-only costs; Advanced Net adds rent avoided and subtracts opportunity cost.</p>
+          </div>
+
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Core Numbers</p>
+          <div className="grid grid-cols-2 gap-3">
+            <NumberField label="Purchase Price" value={inputs.purchasePrice} onChange={(v) => set({ purchasePrice: v })} prefix="$" format="currency" />
+            <NumberField label="Down Payment" value={inputs.downPayment} onChange={(v) => set({ downPayment: v })} prefix="$" format="currency" />
+            <NumberField label="Interest Rate" value={inputs.interestRate} onChange={(v) => set({ interestRate: v })} suffix="%" hint="Mortgage rate" />
+            <NumberField label="Loan Term" value={inputs.loanTermYears} onChange={(v) => set({ loanTermYears: v })} suffix="yrs" />
+            <NumberField label="Closing Costs" value={inputs.initialClosingCosts} onChange={(v) => set({ initialClosingCosts: v })} prefix="$" format="currency" />
+            <NumberField label="Appreciation" value={inputs.annualAppreciation} onChange={(v) => set({ annualAppreciation: v })} suffix="%/yr" />
+          </div>
+
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Ongoing Costs</p>
+          <div className="grid grid-cols-2 gap-3">
+            <NumberField label="Selling Costs" value={inputs.sellingCostPercent} onChange={(v) => set({ sellingCostPercent: v })} suffix="%" hint="Agent + fees" />
+            <NumberField label="Property Tax" value={inputs.annualPropertyTax} onChange={(v) => set({ annualPropertyTax: v })} prefix="$" suffix="/yr" format="currency" />
+            <NumberField label="Insurance" value={inputs.annualInsurance} onChange={(v) => set({ annualInsurance: v })} prefix="$" suffix="/yr" format="currency" />
+            <NumberField label="Maintenance" value={inputs.annualMaintenance} onChange={(v) => set({ annualMaintenance: v })} prefix="$" suffix="/yr" format="currency" />
+            <NumberField label="HOA" value={inputs.monthlyHOA} onChange={(v) => set({ monthlyHOA: v })} prefix="$" suffix="/mo" format="currency" />
+            <NumberField label="Years to Show" value={inputs.maxYears} onChange={(v) => set({ maxYears: Math.max(1, Math.floor(v)) })} />
+          </div>
+
+          {/* Advanced */}
+          <button
+            onClick={() => setAdvOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 text-xs font-semibold text-muted-foreground transition-colors"
+          >
+            Advanced settings
+            <span>{advOpen ? "▲" : "▼"}</span>
+          </button>
+          {advOpen && (
+            <div className="grid grid-cols-2 gap-3">
+              <NumberField label="Rent Avoided" value={inputs.monthlyRentSaved} onChange={(v) => set({ monthlyRentSaved: v })} prefix="$" suffix="/mo" format="currency" hint="What you'd pay in rent" />
+              <NumberField label="Rent Growth" value={inputs.annualRentGrowth} onChange={(v) => set({ annualRentGrowth: v })} suffix="%/yr" />
+              <NumberField label="Opp. Cost Rate" value={inputs.opportunityCostRate} onChange={(v) => set({ opportunityCostRate: v })} suffix="%/yr" hint="S&P avg ~6-7%" />
+              <NumberField label="Annual Tax Benefit" value={inputs.annualTaxBenefit} onChange={(v) => set({ annualTaxBenefit: v })} prefix="$" format="currency" hint="Leave 0 if unsure" />
+            </div>
+          )}
+
+          <button
+            onClick={() => { setLocal(DEFAULTS); onInputsChange?.(DEFAULTS); }}
+            className="w-full text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg py-1.5 transition-colors"
+          >
+            Reset defaults
+          </button>
+        </div>
+
+        {/* How to read */}
+        <div className="rounded-xl border border-border bg-card p-4 space-y-2 text-xs text-muted-foreground">
+          <p className="font-semibold text-foreground text-[11px] uppercase tracking-wide">How to read results</p>
+          <ul className="space-y-1.5 list-none">
+            {[
+              ["Basic Net", "House-only: cash from sale minus down, closing costs, interest, and ownership costs."],
+              ["Advanced Net", "Basic Net + rent avoided + tax benefit − opportunity cost on upfront cash."],
+              ["Break-even", "First year the chosen net value turns positive."],
+            ].map(([term, def]) => (
+              <li key={term}><span className="font-medium text-foreground">{term}:</span> {def}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* ── Results ── */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard label="Monthly P&I" value={fmt$(monthly)} hint="Principal + interest only" />
+          <StatCard label="Basic Break-Even" value={fmtBreakEven(beBasic)} hint="House-only math" positive={beBasic !== null} />
+          <StatCard label="Adv. Break-Even" value={fmtBreakEven(beAdv)} hint="Rent saved + opp. cost" positive={beAdv !== null} />
+          <StatCard label="Adv. Net @ 5 Yrs" value={fmtSigned(fiveYrAdv)} hint="Quick benchmark" positive={fiveYrAdv >= 0} />
+        </div>
+
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-sm">Year-by-Year Breakdown</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">What happens if you sell at the end of each year.</p>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] font-semibold">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500 inline-block" />Cost</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" />Gain</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-violet-500 inline-block" />Advanced</span>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs" style={{ minWidth: 900 }}>
+              <thead>
+                <tr className="bg-muted/50 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <th className="sticky left-0 bg-muted/50 px-4 py-3 text-left">Year</th>
+                  <th className="px-3 py-3 text-right">Sale Price</th>
+                  <th className="px-3 py-3 text-right">Loan Balance</th>
+                  <th className="px-3 py-3 text-right text-red-500">Selling Costs</th>
+                  <th className="px-3 py-3 text-right text-red-500">Interest Paid</th>
+                  <th className="px-3 py-3 text-right text-red-500">Tax+Ins+Maint+HOA</th>
+                  <th className="px-3 py-3 text-right text-emerald-600">Cash Back</th>
+                  <th className="px-3 py-3 text-right text-violet-500">Rent Saved</th>
+                  <th className="px-3 py-3 text-right text-red-500">Opp. Cost</th>
+                  <th className="px-3 py-3 text-right font-bold">Basic Net</th>
+                  <th className="px-3 py-3 text-right font-bold">Adv. Net</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {rows.map((r) => (
+                  <tr key={r.year} className="hover:bg-muted/20 transition-colors">
+                    <td className="sticky left-0 bg-card px-4 py-2.5 font-semibold">Yr {r.year}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{fmt$(r.salePrice)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{fmt$(r.loanBalance)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-red-500">{fmt$(r.sellingCosts)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-red-500">{fmt$(r.interestPaid)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-red-500">{fmt$(r.otherCosts)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-emerald-600">{fmt$(r.cashBack)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-violet-500">{fmt$(r.rentSaved)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-red-500">{fmt$(r.oppCost)}</td>
+                    <td className={`px-3 py-2.5 text-right font-mono font-bold ${r.basicNet >= 0 ? "text-emerald-600 bg-emerald-500/10" : "text-red-500 bg-red-500/10"}`}>
+                      {fmtSigned(r.basicNet)}
+                    </td>
+                    <td className={`px-3 py-2.5 text-right font-mono font-bold ${r.advancedNet >= 0 ? "text-emerald-600 bg-emerald-500/10" : "text-red-500 bg-red-500/10"}`}>
+                      {fmtSigned(r.advancedNet)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="px-5 py-3 border-t border-border bg-muted/20 text-[11px] text-muted-foreground">
+            <strong>Basic Net</strong> = Cash Back − Down Payment − Closing Costs − Interest Paid − Other Costs.{" "}
+            <strong>Advanced Net</strong> = Basic Net + Rent Saved + Tax Benefit − Opportunity Cost.
+            Does not include PMI, utilities, or moving costs.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

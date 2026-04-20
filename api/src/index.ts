@@ -6,6 +6,7 @@ import { logger } from "hono/logger";
 import plansRouter from "./routes/plans.js";
 import trackerRouter from "./routes/tracker.js";
 import internalRouter from "./routes/internal.js";
+import homeCalcRouter from "./routes/homeCalc.js";
 
 const app = new Hono();
 
@@ -23,6 +24,7 @@ app.use(
 app.route("/plans", plansRouter);
 app.route("/tracker", trackerRouter);
 app.route("/internal", internalRouter);
+app.route("/home-calc", homeCalcRouter);
 
 app.get("/", (c) => c.json({ name: "@fire/api", status: "ok" }));
 

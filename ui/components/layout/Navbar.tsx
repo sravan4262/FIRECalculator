@@ -1,5 +1,5 @@
 "use client";
-import { Flame, Calculator, BarChart2 } from "lucide-react";
+import { Flame, Calculator, BarChart2, Home } from "lucide-react";
 import { ModeToggle } from "./ModeToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { AuthButton } from "./AuthButton";
@@ -31,7 +31,7 @@ export function Navbar() {
 
         {/* Center: app tab switcher */}
         <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50 border border-border/40">
-          {(["calculator", "tracker"] as AppTab[]).map((tab) => (
+          {(["calculator", "tracker", "home"] as AppTab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -51,10 +51,12 @@ export function Navbar() {
               >
                 {tab === "calculator" ? (
                   <Calculator className="w-4 h-4" />
-                ) : (
+                ) : tab === "tracker" ? (
                   <BarChart2 className="w-4 h-4" />
+                ) : (
+                  <Home className="w-4 h-4" />
                 )}
-                {tab === "calculator" ? "Calculator" : "Track"}
+                {tab === "calculator" ? "Calculator" : tab === "tracker" ? "Track" : "Home"}
               </span>
             </button>
           ))}

@@ -6,6 +6,7 @@ import { FormWizard } from "@/components/features/calculator/FormWizard";
 import { ChatInterface } from "@/components/features/chat/ChatInterface";
 import { ResultsDashboard } from "@/components/features/calculator/results/ResultsDashboard";
 import { TrackerPage } from "@/components/features/tracker/TrackerPage";
+import { HomeCalcPage } from "@/components/features/home-calc/HomeCalcPage";
 import { Flame } from "lucide-react";
 
 export default function HomePage() {
@@ -17,7 +18,17 @@ export default function HomePage() {
 
       <main className="flex-1 px-4 sm:px-6 py-10">
         <AnimatePresence mode="wait">
-          {activeTab === "tracker" ? (
+          {activeTab === "home" ? (
+            <motion.div
+              key="home"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <HomeCalcPage />
+            </motion.div>
+          ) : activeTab === "tracker" ? (
             <motion.div
               key="tracker"
               initial={{ opacity: 0, y: 12 }}
