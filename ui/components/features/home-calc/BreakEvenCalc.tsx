@@ -87,13 +87,17 @@ export function BreakEvenCalc({ inputs: externalInputs, onInputsChange }: {
           </div>
 
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Core Numbers</p>
+          <div className="rounded-lg border border-border bg-muted/20 p-3 text-[11px] text-muted-foreground space-y-1">
+            <p className="font-semibold text-foreground">What to enter here</p>
+            <p>These are the key numbers from your home purchase. You can find them on any listing (price, taxes) or by calling a lender (rate, term, closing costs). Appreciation is your best guess at how fast home values grow in your area — 3% is a safe default.</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <NumberField label="Purchase Price" value={inputs.purchasePrice} onChange={(v) => set({ purchasePrice: v })} prefix="$" format="currency" />
-            <NumberField label="Down Payment" value={inputs.downPayment} onChange={(v) => set({ downPayment: v })} prefix="$" format="currency" />
-            <NumberField label="Interest Rate" value={inputs.interestRate} onChange={(v) => set({ interestRate: v })} suffix="%" hint="Mortgage rate" />
-            <NumberField label="Loan Term" value={inputs.loanTermYears} onChange={(v) => set({ loanTermYears: v })} suffix="yrs" />
-            <NumberField label="Closing Costs" value={inputs.initialClosingCosts} onChange={(v) => set({ initialClosingCosts: v })} prefix="$" format="currency" />
-            <NumberField label="Appreciation" value={inputs.annualAppreciation} onChange={(v) => set({ annualAppreciation: v })} suffix="%/yr" />
+            <NumberField label="Purchase Price" value={inputs.purchasePrice} onChange={(v) => set({ purchasePrice: v })} prefix="$" format="currency" hint="The listed or agreed-upon sale price of the home" />
+            <NumberField label="Down Payment" value={inputs.downPayment} onChange={(v) => set({ downPayment: v })} prefix="$" format="currency" hint="Upfront cash you pay — 20% of price avoids PMI" />
+            <NumberField label="Interest Rate" value={inputs.interestRate} onChange={(v) => set({ interestRate: v })} suffix="%" hint="Fixed rate your lender quotes (check today's rates)" />
+            <NumberField label="Loan Term" value={inputs.loanTermYears} onChange={(v) => set({ loanTermYears: v })} suffix="yrs" hint="30yr = lower payment; 15yr = less total interest" />
+            <NumberField label="Closing Costs" value={inputs.initialClosingCosts} onChange={(v) => set({ initialClosingCosts: v })} prefix="$" format="currency" hint="~2–5% of price: title, appraisal, lender fees" />
+            <NumberField label="Appreciation" value={inputs.annualAppreciation} onChange={(v) => set({ annualAppreciation: v })} suffix="%/yr" hint="US avg ~3–4%/yr; check your local market trend" />
           </div>
 
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Ongoing Costs</p>
@@ -272,10 +276,21 @@ export function BreakEvenCalc({ inputs: externalInputs, onInputsChange }: {
             </table>
           </div>
 
-          <div className="px-5 py-3 border-t border-border bg-muted/20 text-[11px] text-muted-foreground">
-            <strong>Basic Net</strong> = Cash Back − Down Payment − Closing Costs − Interest Paid − Other Costs.{" "}
-            <strong>Advanced Net</strong> = Basic Net + Rent Saved + Tax Benefit − Opportunity Cost.
-            Does not include PMI, utilities, or moving costs.
+          <div className="px-5 py-3 border-t border-border bg-muted/20 text-[11px] text-muted-foreground space-y-2">
+            <p className="font-semibold text-foreground">Column guide</p>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+              <li><span className="font-medium text-foreground">Sale Price</span> — Home value after annual appreciation compounds.</li>
+              <li><span className="font-medium text-foreground">Loan Balance</span> — What you still owe the bank at year-end.</li>
+              <li><span className="font-medium text-red-500">Selling Costs</span> — Agent commission + transfer fees (% of sale price).</li>
+              <li><span className="font-medium text-red-500">Interest Paid</span> — Cumulative mortgage interest paid to this point.</li>
+              <li><span className="font-medium text-red-500">Tax+Ins+Maint+HOA</span> — Cumulative annual ownership costs.</li>
+              <li><span className="font-medium text-emerald-600">Cash Back</span> — Sale proceeds minus loan payoff and selling costs.</li>
+              <li><span className="font-medium text-violet-500">Rent Saved</span> — Total rent you avoided by owning instead of renting.</li>
+              <li><span className="font-medium text-red-500">Opp. Cost</span> — What your down payment could have grown to in the stock market.</li>
+              <li><span className="font-medium text-foreground">Basic Net</span> — Cash Back minus all house costs vs. your initial investment. Positive = buying paid off.</li>
+              <li><span className="font-medium text-foreground">Adv. Net</span> — Basic Net plus rent saved and tax benefit, minus opportunity cost. The full picture.</li>
+            </ul>
+            <p className="pt-1 border-t border-border">Does not include PMI, utilities, or moving costs.</p>
           </div>
         </div>
       </div>

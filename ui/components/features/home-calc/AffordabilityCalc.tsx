@@ -66,19 +66,27 @@ export function AffordabilityCalc({ inputs: externalInputs, onInputsChange }: {
           </div>
 
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Income & Debts</p>
+          <div className="rounded-lg border border-border bg-muted/20 p-3 text-[11px] text-muted-foreground space-y-1">
+            <p className="font-semibold text-foreground">What to enter here</p>
+            <p>Use your total household gross (pre-tax) income. For monthly debts, include every recurring payment — car loan, student loan, credit card minimums. The calculator uses these to stay within lender debt-to-income limits.</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <NumberField label="Annual Income" value={inputs.annualIncome} onChange={(v) => set({ annualIncome: v })} prefix="$" format="currency" hint="Pre-tax household income" />
-            <NumberField label="Monthly Debts" value={inputs.monthlyDebts} onChange={(v) => set({ monthlyDebts: v })} prefix="$" suffix="/mo" format="currency" hint="Car, student loans, etc." />
-            <NumberField label="Down Payment" value={inputs.downPayment} onChange={(v) => set({ downPayment: v })} prefix="$" format="currency" hint="Cash toward purchase" />
+            <NumberField label="Annual Income" value={inputs.annualIncome} onChange={(v) => set({ annualIncome: v })} prefix="$" format="currency" hint="Combined pre-tax household income per year" />
+            <NumberField label="Monthly Debts" value={inputs.monthlyDebts} onChange={(v) => set({ monthlyDebts: v })} prefix="$" suffix="/mo" format="currency" hint="Car, student loans, credit card minimums" />
+            <NumberField label="Down Payment" value={inputs.downPayment} onChange={(v) => set({ downPayment: v })} prefix="$" format="currency" hint="Upfront cash — 20% of price avoids PMI" />
           </div>
 
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Loan Assumptions</p>
+          <div className="rounded-lg border border-border bg-muted/20 p-3 text-[11px] text-muted-foreground space-y-1">
+            <p className="font-semibold text-foreground">What to enter here</p>
+            <p>These come from your lender or the listing. Property tax rate varies by county — check your target area&apos;s public records (typically 0.5–2.5%). Home insurance is usually $100–250/mo. HOA is on the listing if applicable.</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <NumberField label="Interest Rate" value={inputs.interestRate} onChange={(v) => set({ interestRate: v })} suffix="%" />
-            <NumberField label="Loan Term" value={inputs.loanTermYears} onChange={(v) => set({ loanTermYears: v })} suffix="yrs" />
-            <NumberField label="Property Tax" value={inputs.propertyTaxRate} onChange={(v) => set({ propertyTaxRate: v })} suffix="%/yr" hint="Annual tax as % of price" />
-            <NumberField label="Home Insurance" value={inputs.annualInsurance} onChange={(v) => set({ annualInsurance: v })} prefix="$" suffix="/yr" format="currency" />
-            <NumberField label="HOA" value={inputs.monthlyHOA} onChange={(v) => set({ monthlyHOA: v })} prefix="$" suffix="/mo" format="currency" />
+            <NumberField label="Interest Rate" value={inputs.interestRate} onChange={(v) => set({ interestRate: v })} suffix="%" hint="Fixed rate quoted by your lender" />
+            <NumberField label="Loan Term" value={inputs.loanTermYears} onChange={(v) => set({ loanTermYears: v })} suffix="yrs" hint="30yr = lower payment; 15yr = less total interest" />
+            <NumberField label="Property Tax" value={inputs.propertyTaxRate} onChange={(v) => set({ propertyTaxRate: v })} suffix="%/yr" hint="Annual tax as % of home price (check county records)" />
+            <NumberField label="Home Insurance" value={inputs.annualInsurance} onChange={(v) => set({ annualInsurance: v })} prefix="$" suffix="/yr" format="currency" hint="Typically $1,200–3,000/yr depending on location" />
+            <NumberField label="HOA" value={inputs.monthlyHOA} onChange={(v) => set({ monthlyHOA: v })} prefix="$" suffix="/mo" format="currency" hint="Monthly fee for condos/communities — 0 if none" />
           </div>
 
           <button
@@ -151,8 +159,16 @@ export function AffordabilityCalc({ inputs: externalInputs, onInputsChange }: {
               </tbody>
             </table>
           </div>
-          <div className="px-5 py-3 border-t border-border bg-muted/20 text-[11px] text-muted-foreground">
-            <strong>PITI</strong> = Principal + Interest + Taxes + Insurance (+ HOA). Max Loan is derived from the maximum PITI after subtracting fixed monthly costs. Max Home Price = Max Loan + Down Payment.
+          <div className="px-5 py-3 border-t border-border bg-muted/20 text-[11px] text-muted-foreground space-y-2">
+            <p className="font-semibold text-foreground">Column guide</p>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+              <li><span className="font-medium text-foreground">Front / Back DTI</span> — Front-end: housing payment ÷ income. Back-end: (housing + all debts) ÷ income.</li>
+              <li><span className="font-medium text-foreground">Max PITI</span> — Maximum monthly housing payment allowed under this scenario (Principal + Interest + Taxes + Insurance + HOA).</li>
+              <li><span className="font-medium text-red-500">P&I Payment</span> — The mortgage-only portion of PITI — what goes to the lender each month.</li>
+              <li><span className="font-medium text-foreground">Max Loan</span> — Largest loan the lender will approve, derived from the Max PITI after subtracting tax, insurance, and HOA.</li>
+              <li><span className="font-medium text-emerald-600">Max Home Price</span> — Max Loan + your Down Payment. The most expensive home you can buy under this scenario.</li>
+            </ul>
+            <p className="pt-1 border-t border-border">Lender approval not guaranteed at any DTI. Credit score, employment history, and cash reserves all affect eligibility.</p>
           </div>
         </div>
 
