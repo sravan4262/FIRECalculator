@@ -11,6 +11,10 @@ import {
   pmt,
 } from "./lib/math";
 import type { BreakEvenInputs } from "./lib/types";
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend, ReferenceLine,
+} from "recharts";
 
 const DEFAULTS: BreakEvenInputs = {
   purchasePrice: 600000,
@@ -149,6 +153,69 @@ export function BreakEvenCalc({ inputs: externalInputs, onInputsChange }: {
           <StatCard label="Basic Break-Even" value={fmtBreakEven(beBasic)} hint="House-only math" positive={beBasic !== null} />
           <StatCard label="Adv. Break-Even" value={fmtBreakEven(beAdv)} hint="Rent saved + opp. cost" positive={beAdv !== null} />
           <StatCard label="Adv. Net @ 5 Yrs" value={fmtSigned(fiveYrAdv)} hint="Quick benchmark" positive={fiveYrAdv >= 0} />
+        </div>
+
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-start justify-between">
+            <div>
+              <h3 className="font-semibold text-sm">Break-Even Over Time</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Where lines cross zero, buying starts to beat renting.</p>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] font-semibold shrink-0 mt-0.5">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-violet-500 inline-block" />Adv. Net</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" />Basic Net</span>
+            </div>
+          </div>
+          <div className="px-2 py-4">
+            <ResponsiveContainer width="100%" height={320}>
+              <AreaChart
+                data={rows.map(r => ({ year: `Yr ${r.year}`, "Basic Net": r.basicNet, "Adv. Net": r.advancedNet }))}
+                margin={{ top: 44, right: 16, left: 8, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="gradAdv" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.03} />
+                  </linearGradient>
+                  <linearGradient id="gradBasic" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.12)" vertical={false} />
+                <XAxis dataKey="year" tick={{ fontSize: 10, fill: "rgba(128,128,128,0.7)" }} tickLine={false} axisLine={false} />
+                <YAxis
+                  tickFormatter={(v) => v >= 0 ? `+$${(v / 1000).toFixed(0)}k` : `-$${(Math.abs(v) / 1000).toFixed(0)}k`}
+                  tick={{ fontSize: 10, fill: "rgba(128,128,128,0.7)" }} tickLine={false} axisLine={false} width={56}
+                />
+                <Tooltip
+                  position={{ y: 0 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    return (
+                      <div style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, padding: "7px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 20, whiteSpace: "nowrap" }}>
+                        <span style={{ fontWeight: 700, fontSize: 13 }}>{label}</span>
+                        {payload.map((p, i) => (
+                          <span key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: 2, background: p.color, flexShrink: 0 }} />
+                            <span style={{ color: "hsl(var(--muted-foreground))" }}>{p.name}</span>
+                            <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: (p.value as number) >= 0 ? "#10b981" : "#ef4444" }}>
+                              {fmtSigned(p.value as number)}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  }}
+                />
+                <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeWidth={1.5} strokeDasharray="5 4"
+                  label={{ value: "break-even", position: "insideTopRight", fontSize: 9, fill: "rgba(128,128,128,0.5)", dy: -6 }}
+                />
+                <Area type="monotone" dataKey="Adv. Net" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#gradAdv)" dot={false} activeDot={{ r: 5, fill: "#8b5cf6", strokeWidth: 0 }} />
+                <Area type="monotone" dataKey="Basic Net" stroke="#10b981" strokeWidth={2.5} fill="url(#gradBasic)" dot={false} activeDot={{ r: 5, fill: "#10b981", strokeWidth: 0 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className="rounded-xl border border-border bg-card overflow-hidden">

@@ -3,6 +3,10 @@ import { useMemo, useState } from "react";
 import { NumberField } from "@/components/ui/NumberField";
 import { amortize, pmt, fmt$ } from "./lib/math";
 import type { MortgageInputs } from "./lib/types";
+import {
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend,
+} from "recharts";
 
 const DEFAULTS: MortgageInputs = {
   homePrice: 600000,
@@ -110,6 +114,61 @@ export function MortgageCalc({ inputs: externalInputs, onInputsChange }: {
           <StatCard label="Total Interest" value={fmt$(totalInterest)} hint="Total cost of borrowing" bad />
           <StatCard label="Total Cost" value={fmt$(totalCost)} hint="Loan amount + interest" />
           <StatCard label="Payoff" value={payoffStr} hint="With extra payments applied" />
+        </div>
+
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-start justify-between">
+            <div>
+              <h3 className="font-semibold text-sm">Principal vs Interest + Remaining Balance</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Bars show annual payment split; line tracks the loan balance declining over time.</p>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] font-semibold shrink-0 mt-0.5">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500 inline-block" />Interest</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" />Principal</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-indigo-400 inline-block" />Balance</span>
+            </div>
+          </div>
+          <div className="px-2 py-4">
+            <ResponsiveContainer width="100%" height={320}>
+              <ComposedChart
+                data={rows.map(r => ({ year: `Yr ${r.year}`, Interest: r.interestPaid, Principal: r.principalPaid, Balance: r.balance }))}
+                barSize={rows.length > 20 ? 7 : 12}
+                margin={{ top: 44, right: 52, left: 8, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="balanceLine" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#818cf8" />
+                    <stop offset="100%" stopColor="#6366f1" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.12)" vertical={false} />
+                <XAxis dataKey="year" tick={{ fontSize: 10, fill: "rgba(128,128,128,0.7)" }} tickLine={false} axisLine={false} interval={rows.length > 20 ? 4 : rows.length > 10 ? 1 : 0} />
+                <YAxis yAxisId="bars" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "rgba(128,128,128,0.7)" }} tickLine={false} axisLine={false} width={44} />
+                <YAxis yAxisId="balance" orientation="right" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "rgba(128,128,128,0.7)" }} tickLine={false} axisLine={false} width={48} />
+                <Tooltip
+                  position={{ y: 0 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    return (
+                      <div style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, padding: "7px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 20, whiteSpace: "nowrap" }}>
+                        <span style={{ fontWeight: 700, fontSize: 13 }}>{label}</span>
+                        {payload.map((p, i) => (
+                          <span key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: 2, background: p.color, flexShrink: 0 }} />
+                            <span style={{ color: "hsl(var(--muted-foreground))" }}>{p.name}</span>
+                            <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{fmt$(p.value as number)}</span>
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  }}
+                />
+                <Bar yAxisId="bars" dataKey="Interest" stackId="a" fill="#ef4444" fillOpacity={0.85} radius={[0, 0, 0, 0]} />
+                <Bar yAxisId="bars" dataKey="Principal" stackId="a" fill="#10b981" fillOpacity={0.85} radius={[3, 3, 0, 0]} />
+                <Line yAxisId="balance" type="monotone" dataKey="Balance" stroke="#818cf8" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#818cf8", strokeWidth: 0 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className="rounded-xl border border-border bg-card overflow-hidden">

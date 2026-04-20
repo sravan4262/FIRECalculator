@@ -4,20 +4,18 @@ import { ModeToggle } from "./ModeToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { AuthButton } from "./AuthButton";
 import { useFireStore } from "@/lib/store";
-import type { AppTab } from "@/lib/store";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function Navbar() {
   const { hasResults, resetInputs, activeTab, setActiveTab, wizardStep } = useFireStore();
+  const isEarlyRetirement = activeTab === "calculator" || activeTab === "tracker";
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between h-16">
+      {/* Main nav row */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 grid grid-cols-3 items-center h-14">
         {/* Logo */}
-        <button
-          onClick={resetInputs}
-          className="flex items-center gap-2 group"
-        >
+        <button onClick={resetInputs} className="flex items-center gap-2 group">
           <div className="relative">
             <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
               <Flame className="w-4.5 h-4.5 text-primary" />
@@ -29,41 +27,47 @@ export function Navbar() {
           </span>
         </button>
 
-        {/* Center: app tab switcher */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50 border border-border/40">
-          {(["calculator", "tracker", "home"] as AppTab[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className="relative flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-            >
-              {activeTab === tab && (
-                <motion.div
-                  layoutId="nav-tab-pill"
-                  className="absolute inset-0 rounded-lg bg-primary/25 border border-primary/35"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-              <span
-                className={`relative z-10 flex items-center gap-2 transition-colors ${
-                  activeTab === tab ? "text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                {tab === "calculator" ? (
-                  <Calculator className="w-4 h-4" />
-                ) : tab === "tracker" ? (
-                  <BarChart2 className="w-4 h-4" />
-                ) : (
-                  <Home className="w-4 h-4" />
-                )}
-                {tab === "calculator" ? "Calculator" : tab === "tracker" ? "Track" : "Home"}
-              </span>
-            </button>
-          ))}
+        {/* Main tabs */}
+        <div className="flex items-center justify-center gap-1 p-1 rounded-xl bg-muted/50 border border-border/40 justify-self-center">
+          {/* Early Retirement */}
+          <button
+            onClick={() => setActiveTab("calculator")}
+            className="relative flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+          >
+            {isEarlyRetirement && (
+              <motion.div
+                layoutId="main-tab-pill"
+                className="absolute inset-0 rounded-lg bg-primary/25 border border-primary/35"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <span className={`relative z-10 flex items-center gap-2 text-foreground transition-opacity ${isEarlyRetirement ? "opacity-100" : "opacity-40"}`}>
+              <Calculator className="w-4 h-4" />
+              Early Retirement
+            </span>
+          </button>
+
+          {/* Home Mortgage */}
+          <button
+            onClick={() => setActiveTab("home")}
+            className="relative flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+          >
+            {activeTab === "home" && (
+              <motion.div
+                layoutId="main-tab-pill"
+                className="absolute inset-0 rounded-lg bg-primary/25 border border-primary/35"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <span className={`relative z-10 flex items-center gap-2 text-foreground transition-opacity ${activeTab === "home" ? "opacity-100" : "opacity-40"}`}>
+              <Home className="w-4 h-4" />
+              Home Mortgage
+            </span>
+          </button>
         </div>
 
         {/* Right controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-self-end">
           {activeTab === "calculator" && !hasResults && <ModeToggle />}
           {activeTab === "calculator" && (wizardStep > 0 || hasResults) && (
             <motion.button
@@ -80,6 +84,46 @@ export function Navbar() {
           <AuthButton />
         </div>
       </div>
+
+      {/* Sub-tabs row — slides in when Early Retirement is active */}
+      <AnimatePresence>
+        {isEarlyRetirement && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="overflow-hidden border-t border-border/30"
+          >
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 flex justify-center py-1.5">
+              <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/40 border border-border/30">
+                {([
+                  { tab: "calculator" as const, label: "Calculator", icon: <Calculator className="w-3.5 h-3.5" /> },
+                  { tab: "tracker" as const, label: "Track", icon: <BarChart2 className="w-3.5 h-3.5" /> },
+                ]).map(({ tab, label, icon }) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className="relative flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
+                  >
+                    {activeTab === tab && (
+                      <motion.div
+                        layoutId="sub-tab-pill"
+                        className="absolute inset-0 rounded-md bg-primary/25 border border-primary/35"
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                    <span className={`relative z-10 flex items-center gap-1.5 transition-colors ${activeTab === tab ? "text-foreground" : "text-muted-foreground"}`}>
+                      {icon}
+                      {label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
