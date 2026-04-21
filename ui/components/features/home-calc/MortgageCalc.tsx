@@ -74,13 +74,17 @@ export function MortgageCalc({ inputs: externalInputs, onInputsChange }: {
           </div>
 
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Core Numbers</p>
+          <div className="rounded-lg border border-border bg-muted/20 p-3 text-[11px] text-muted-foreground space-y-1">
+            <p className="font-semibold text-foreground">What to enter here</p>
+            <p>Enter the home price and down payment from the listing, then your lender's quoted interest rate and term. Try toggling the Extra Payment field — even $100/mo extra can save tens of thousands in interest.</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <NumberField label="Home Price" value={inputs.homePrice} onChange={(v) => set({ homePrice: v })} prefix="$" format="currency" />
-            <NumberField label="Down Payment" value={inputs.downPayment} onChange={(v) => set({ downPayment: v })} prefix="$" format="currency" />
-            <NumberField label="Interest Rate" value={inputs.interestRate} onChange={(v) => set({ interestRate: v })} suffix="%" />
-            <NumberField label="Loan Term" value={inputs.loanTermYears} onChange={(v) => set({ loanTermYears: v })} suffix="yrs" />
-            <NumberField label="Extra Payment" value={inputs.extraMonthlyPayment} onChange={(v) => set({ extraMonthlyPayment: v })} prefix="$" suffix="/mo" format="currency" hint="Additional principal/mo" />
-            <NumberField label="Years to Show" value={inputs.displayYears} onChange={(v) => set({ displayYears: Math.max(1, Math.floor(v)) })} />
+            <NumberField label="Home Price" value={inputs.homePrice} onChange={(v) => set({ homePrice: v })} prefix="$" format="currency" hint="Total purchase price of the home" />
+            <NumberField label="Down Payment" value={inputs.downPayment} onChange={(v) => set({ downPayment: v })} prefix="$" format="currency" hint="Upfront cash — 20% of price avoids PMI" />
+            <NumberField label="Interest Rate" value={inputs.interestRate} onChange={(v) => set({ interestRate: v })} suffix="%" hint="Fixed rate quoted by your lender" />
+            <NumberField label="Loan Term" value={inputs.loanTermYears} onChange={(v) => set({ loanTermYears: v })} suffix="yrs" hint="30yr = lower payment; 15yr = less total interest" />
+            <NumberField label="Extra Payment" value={inputs.extraMonthlyPayment} onChange={(v) => set({ extraMonthlyPayment: v })} prefix="$" suffix="/mo" format="currency" hint="Goes straight to principal — cuts years off your loan" />
+            <NumberField label="Years to Show" value={inputs.displayYears} onChange={(v) => set({ displayYears: Math.max(1, Math.floor(v)) })} hint="Limit table rows to this many years" />
           </div>
 
           <button
@@ -95,15 +99,17 @@ export function MortgageCalc({ inputs: externalInputs, onInputsChange }: {
           <p className="font-semibold text-foreground text-[11px] uppercase tracking-wide">How to read the table</p>
           <ul className="space-y-1.5">
             {[
-              ["Principal Paid", "How much the loan balance shrank — real equity building."],
-              ["Interest Paid", "Cost of borrowing that year — falls as balance drops."],
-              ["Cum. Interest", "Running total of interest paid since month one."],
-              ["Balance", "What you still owe. Sell above this to walk away with equity."],
-              ["Equity %", "Fraction of the original loan you've paid down."],
+              ["Annual Payment", "Total P&I you paid that year (monthly × 12 ± any extra payments)."],
+              ["Principal Paid", "How much your loan balance actually shrank — this is real equity you own."],
+              ["Interest Paid", "The lender's fee for that year. It's highest in Year 1 and shrinks every year as your balance drops."],
+              ["Cum. Interest", "Running total of all interest paid since day one — the true cost of borrowing."],
+              ["Remaining Balance", "What you still owe the bank. If you sold the home, you'd need to cover this from the sale price."],
+              ["Equity %", "What fraction of the original loan you've paid off. Starts near 0%, reaches 100% when fully paid."],
             ].map(([term, def]) => (
               <li key={term}><span className="font-medium text-foreground">{term}:</span> {def}</li>
             ))}
           </ul>
+          <p className="pt-1 border-t border-border">Tip: In early years most of your payment is interest, not principal — that&apos;s normal for mortgages. Extra payments go straight to principal and can shave years off your loan.</p>
         </div>
       </div>
 
