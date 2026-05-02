@@ -4,7 +4,7 @@ import type { FireInputs, FireResults } from "./engine/types";
 import { calculateFireMonthly } from "./engine/monthly";
 import { mergeInputs } from "./engine/merge";
 
-export type InputMode = "form" | "chat";
+export type InputMode = "simple" | "form" | "chat";
 export type WizardStep = 0 | 1 | 2 | 3 | 4;
 export type AppTab = "calculator" | "tracker" | "home";
 
@@ -95,7 +95,7 @@ export const useFireStore = create<FireStore>((set, get) => ({
   activeTab: "calculator",
   setActiveTab: (tab) => set({ activeTab: tab }),
 
-  inputMode: "form",
+  inputMode: "simple",
   setInputMode: (mode) => set({ inputMode: mode }),
 
   wizardStep: 0,

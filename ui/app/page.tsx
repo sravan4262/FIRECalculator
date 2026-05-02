@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useFireStore } from "@/lib/store";
 import { Navbar } from "@/components/layout/Navbar";
 import { FormWizard } from "@/components/features/calculator/FormWizard";
+import { SimpleCalculator } from "@/components/features/calculator/SimpleCalculator";
 import { ChatInterface } from "@/components/features/chat/ChatInterface";
 import { ResultsDashboard } from "@/components/features/calculator/results/ResultsDashboard";
 import { TrackerPage } from "@/components/features/tracker/TrackerPage";
@@ -71,7 +72,9 @@ export default function HomePage() {
                   transition={{ duration: 0.4, delay: 0.3 }}
                   className="text-muted-foreground mt-3 max-w-md mx-auto text-sm sm:text-base"
                 >
-                  {inputMode === "form"
+                  {inputMode === "simple"
+                    ? "Six numbers, one answer. We'll handle the rest."
+                    : inputMode === "form"
                     ? "Fill in your numbers and we'll calculate your FIRE date."
                     : "Chat with our AI and we'll collect everything naturally."}
                 </motion.p>
@@ -79,7 +82,17 @@ export default function HomePage() {
 
               {/* Input mode */}
               <AnimatePresence mode="wait">
-                {inputMode === "form" ? (
+                {inputMode === "simple" ? (
+                  <motion.div
+                    key="simple"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <SimpleCalculator />
+                  </motion.div>
+                ) : inputMode === "form" ? (
                   <motion.div
                     key="form"
                     initial={{ opacity: 0, x: -20 }}
