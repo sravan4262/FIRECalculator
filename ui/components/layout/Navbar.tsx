@@ -1,6 +1,5 @@
 "use client";
-import { Flame, Calculator, BarChart2, Home } from "lucide-react";
-import { ModeToggle } from "./ModeToggle";
+import { Flame, Calculator, BarChart2, Home, Receipt } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { AuthButton } from "./AuthButton";
 import { useFireStore } from "@/lib/store";
@@ -13,7 +12,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
       {/* Main nav row */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 grid grid-cols-3 items-center h-14">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3 h-14">
         {/* Logo */}
         <button onClick={resetInputs} className="flex items-center gap-2 group">
           <div className="relative">
@@ -32,7 +31,7 @@ export function Navbar() {
           {/* Early Retirement */}
           <button
             onClick={() => setActiveTab("calculator")}
-            className="relative flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            className="relative flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
           >
             {isEarlyRetirement && (
               <motion.div
@@ -43,14 +42,15 @@ export function Navbar() {
             )}
             <span className={`relative z-10 flex items-center gap-2 text-foreground transition-opacity ${isEarlyRetirement ? "opacity-100" : "opacity-40"}`}>
               <Calculator className="w-4 h-4" />
-              Early Retirement
+              <span className="hidden lg:inline">Early Retirement</span>
+              <span className="lg:hidden">Retire</span>
             </span>
           </button>
 
           {/* Home Mortgage */}
           <button
             onClick={() => setActiveTab("home")}
-            className="relative flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            className="relative flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
           >
             {activeTab === "home" && (
               <motion.div
@@ -61,14 +61,32 @@ export function Navbar() {
             )}
             <span className={`relative z-10 flex items-center gap-2 text-foreground transition-opacity ${activeTab === "home" ? "opacity-100" : "opacity-40"}`}>
               <Home className="w-4 h-4" />
-              Home Mortgage
+              <span className="hidden lg:inline">Home Mortgage</span>
+              <span className="lg:hidden">Home</span>
+            </span>
+          </button>
+
+          {/* Expense */}
+          <button
+            onClick={() => setActiveTab("expense")}
+            className="relative flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+          >
+            {activeTab === "expense" && (
+              <motion.div
+                layoutId="main-tab-pill"
+                className="absolute inset-0 rounded-lg bg-primary/25 border border-primary/35"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <span className={`relative z-10 flex items-center gap-2 text-foreground transition-opacity ${activeTab === "expense" ? "opacity-100" : "opacity-40"}`}>
+              <Receipt className="w-4 h-4" />
+              Expense
             </span>
           </button>
         </div>
 
         {/* Right controls */}
         <div className="flex items-center gap-2 justify-self-end">
-          {activeTab === "calculator" && !hasResults && <ModeToggle />}
           {activeTab === "calculator" && (wizardStep > 0 || hasResults) && (
             <motion.button
               key="start-over"

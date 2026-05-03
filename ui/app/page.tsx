@@ -8,6 +8,8 @@ import { ChatInterface } from "@/components/features/chat/ChatInterface";
 import { ResultsDashboard } from "@/components/features/calculator/results/ResultsDashboard";
 import { TrackerPage } from "@/components/features/tracker/TrackerPage";
 import { HomeCalcPage } from "@/components/features/home-calc/HomeCalcPage";
+import { MoneyPage } from "@/components/features/money/MoneyPage";
+import { ModeToggle } from "@/components/layout/ModeToggle";
 import { Flame } from "lucide-react";
 
 export default function HomePage() {
@@ -28,6 +30,16 @@ export default function HomePage() {
               transition={{ duration: 0.25 }}
             >
               <HomeCalcPage />
+            </motion.div>
+          ) : activeTab === "expense" ? (
+            <motion.div
+              key="expense"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <MoneyPage />
             </motion.div>
           ) : activeTab === "tracker" ? (
             <motion.div
@@ -78,6 +90,15 @@ export default function HomePage() {
                     ? "Fill in your numbers and we'll calculate your FIRE date."
                     : "Chat with our AI and we'll collect everything naturally."}
                 </motion.p>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.4 }}
+                  className="mt-6 flex justify-center"
+                >
+                  <ModeToggle />
+                </motion.div>
               </div>
 
               {/* Input mode */}

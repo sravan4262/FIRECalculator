@@ -6,7 +6,7 @@ import { mergeInputs } from "./engine/merge";
 
 export type InputMode = "simple" | "form" | "chat";
 export type WizardStep = 0 | 1 | 2 | 3 | 4;
-export type AppTab = "calculator" | "tracker" | "home";
+export type AppTab = "calculator" | "tracker" | "home" | "expense";
 
 export function nextMonthStr(): string {
   const d = new Date();
